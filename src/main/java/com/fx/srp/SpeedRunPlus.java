@@ -103,9 +103,7 @@ public class SpeedRunPlus extends JavaPlugin {
 
         // Command interceptor - act on SPR commands
         CommandInterceptor commandInterceptor = new CommandInterceptor(core, netherPortals);
-        Objects.requireNonNull(getCommand(Commands.SRP.with(Subcommands.START))).setExecutor(commandInterceptor);
-        Objects.requireNonNull(getCommand(Commands.SRP.with(Subcommands.STOP))).setExecutor(commandInterceptor);
-        Objects.requireNonNull(getCommand(Commands.SRP.with(Subcommands.RESET))).setExecutor(commandInterceptor);
+        Objects.requireNonNull(getCommand(Commands.SRP.getCommand())).setExecutor(commandInterceptor);
 
         // Register an event listeners - act on certain events
         getServer().getPluginManager().registerEvents(new PlayerListener(core), this);
@@ -149,7 +147,7 @@ public class SpeedRunPlus extends JavaPlugin {
         }
     }
 
-    private boolean checkPrerequisites(MultiverseCore core,  MultiverseNetherPortals netherPortals) {
+    private boolean checkPrerequisites(MultiverseCore core, MultiverseNetherPortals netherPortals) {
         // Multiverse-NetherPortals is a prerequisite and must be of protocol version 24 or later
         if (core == null) {
             logger.severe("[SRP] Multiverse-Core not installed!");
