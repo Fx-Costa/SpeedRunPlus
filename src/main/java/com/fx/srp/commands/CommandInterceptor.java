@@ -54,12 +54,18 @@ public class CommandInterceptor implements CommandExecutor {
         String end = plugin.getSRP_END_PREFIX() + uuid;
 
         // Parse the command
-        if (args.length == 0) {
+        if (args.length < 1) {
             player.sendMessage(ChatColor.RED + "Usage: /srp <start|stop|reset|battle|coop> [player]");
             return false;
         }
+
         Subcommands subcommand = Subcommands.valueOf(args[0].toUpperCase());
-        Player otherPlayer = args[1] != null ? Bukkit.getPlayer(args[1]) : null;
+        Player otherPlayer;
+
+        // Other player to include in co-op or battle
+        if (args.length == 2) {
+            otherPlayer = args[1] != null ? Bukkit.getPlayer(args[1]) : null;
+        }
 
         // Execute command
         switch (subcommand) {
