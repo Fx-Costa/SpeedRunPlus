@@ -50,21 +50,25 @@ public class TimerUtil {
     }
 
     public static long getMilliseconds(StopWatch stopWatch) {
+        if (stopWatch == null) return 0;
         long ms = stopWatch.getTime() % 1000L;
         return (ms / 10L);  // 2 Digits
     }
 
     public static long getSeconds(StopWatch stopWatch) {
+        if (stopWatch == null) return 0;
         long sec = stopWatch.getTime() / 1000L;
         return sec % 60;
     }
 
     public static long getMinutes(StopWatch stopWatch) {
+        if (stopWatch == null) return 0;
         long sec = stopWatch.getTime() / 1000L;
         return sec % 3600 / 60;
     }
 
     public static long getHours(StopWatch stopWatch) {
+        if (stopWatch == null) return 0;
         long sec = stopWatch.getTime() / 1000L;
         return sec / 3600;
     }

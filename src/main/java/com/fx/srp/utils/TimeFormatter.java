@@ -32,7 +32,13 @@ public class TimeFormatter {
     }
 
     public TimeFormatter includeHours() {
-        if (TimerUtil.getHours(stopWatch) > 0) this.includeHours = true;
+        long hours = (stopWatch != null)
+                ? TimerUtil.getHours(stopWatch)
+                : TimerUtil.getHours(milliseconds);
+
+        if (hours > 0) {
+            this.includeHours = true;
+        }
         return this;
     }
 

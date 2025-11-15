@@ -58,7 +58,7 @@ public class CommandInterceptor implements CommandExecutor {
             player.sendMessage(ChatColor.RED + "Usage: /srp <start|stop|reset|battle|coop> [player]");
             return false;
         }
-        Subcommands subcommand = Subcommands.valueOf(args[0].toLowerCase());
+        Subcommands subcommand = Subcommands.valueOf(args[0].toUpperCase());
         Player otherPlayer = args[1] != null ? Bukkit.getPlayer(args[1]) : null;
 
         // Execute command
