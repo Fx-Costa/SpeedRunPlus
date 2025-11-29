@@ -1,10 +1,12 @@
-package com.fx.srp.managers;
+package com.fx.srp.managers.util;
 
 import com.fx.srp.SpeedRunPlus;
-import com.fx.srp.utils.TimeFormatter;
+import com.fx.srp.config.ConfigHandler;
+import com.fx.srp.util.time.TimeFormatter;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
@@ -18,25 +20,28 @@ import java.util.stream.Collectors;
 public class LeaderboardManager {
 
     private final Logger logger = Bukkit.getLogger();
-
+    private final ConfigHandler configHandler = ConfigHandler.getInstance();
     private final SpeedRunPlus plugin;
+
     private final File dataFile;
     private final List<RunEntry> leaderboard = new ArrayList<>();
-
     private final List<PodiumEntry> currentPodium = new ArrayList<>();
 
     public LeaderboardManager(SpeedRunPlus plugin) {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "leaderboard.yml");
         loadLeaderboard();
+        updatePodium();
     }
 
     public static class RunEntry {
         public String playerName;
+        public UUID playerUUID;
         public long time; // milliseconds
 
-        public RunEntry(String playerName, long time) {
+        public RunEntry(String playerName, UUID playerUUID, long time) {
             this.playerName = playerName;
+            this.playerUUID = playerUUID;
             this.time = time;
         }
     }
@@ -47,19 +52,16 @@ public class LeaderboardManager {
     }
 
     public void loadLeaderboard() {
-        try {
-            if (!dataFile.exists()) {
-                dataFile.getParentFile().mkdirs();
-                dataFile.createNewFile();
-                return;
-            }
+        // Cannot load nor create leaderboard directories / file
+        if (!createLeaderboardFileIfNotPresent(dataFile)) return;
 
+        try {
             List<String> lines = Files.readAllLines(dataFile.toPath());
             leaderboard.clear();
             for (String line : lines) {
                 String[] parts = line.split(",");
-                if (parts.length == 2) {
-                    leaderboard.add(new RunEntry(parts[0], Long.parseLong(parts[1])));
+                if (parts.length == 3) {
+                    leaderboard.add(new RunEntry(parts[0], UUID.fromString(parts[1]), Long.parseLong(parts[2])));
                 }
             }
             sortLeaderboard();
@@ -71,7 +73,7 @@ public class LeaderboardManager {
 
     public void saveLeaderboard() {
         List<String> lines = leaderboard.stream()
-                .map(e -> e.playerName + "," + e.time)
+                .map(e -> e.playerName + "," + e.playerUUID + "," + e.time)
                 .collect(Collectors.toList());
         try {
             Files.write(dataFile.toPath(), lines);
@@ -81,17 +83,10 @@ public class LeaderboardManager {
     }
 
     public void finishRun(Player player, long time) {
-        leaderboard.add(new RunEntry(player.getName(), time));
+        leaderboard.add(new RunEntry(player.getName(), player.getUniqueId(), time));
         sortLeaderboard();
         saveLeaderboard();
         updatePodium();
-    }
-
-    private void sortLeaderboard() {
-        leaderboard.sort(Comparator.comparingLong(e -> e.time));
-        if (leaderboard.size() > 10) {
-            leaderboard.subList(10, leaderboard.size()).clear();
-        }
     }
 
     public void updatePodium() {
@@ -107,8 +102,8 @@ public class LeaderboardManager {
             currentPodium.clear();
 
             // The positions of the podium in the world
-            World world = plugin.getPodiumWorld();
-            List<Location> podiumLocations = new ArrayList<>(plugin.getPODIUM_POSITIONS().values());
+            World world = configHandler.getPodiumWorld();
+            List<Location> podiumLocations = new ArrayList<>(configHandler.getPodiumPositions().values());
 
             for (int i = 0; i < Math.min(leaderboard.size(), podiumLocations.size()); i++) {
                 RunEntry entry = leaderboard.get(i);
@@ -123,7 +118,7 @@ public class LeaderboardManager {
                 // Create player head item
                 ItemStack head = new ItemStack(Material.PLAYER_HEAD);
                 SkullMeta skullMeta = (SkullMeta) head.getItemMeta();
-                OfflinePlayer offline = Bukkit.getOfflinePlayer(entry.playerName);
+                OfflinePlayer offline = Bukkit.getOfflinePlayer(entry.playerUUID);
                 if (offline.hasPlayedBefore() || offline.isOnline()) {
                     skullMeta.setOwningPlayer(offline);
                 } else {
@@ -138,7 +133,8 @@ public class LeaderboardManager {
                 headStand.setMarker(true);
                 headStand.setInvulnerable(true);
                 headStand.setRotation(180f, 0f);
-                headStand.getEquipment().setHelmet(head);
+                EntityEquipment equipment = headStand.getEquipment();
+                if (equipment != null) equipment.setHelmet(head);
                 headStand.addScoreboardTag("spr_podium_head");
 
                 // An armor stand for the Player's name
@@ -169,5 +165,32 @@ public class LeaderboardManager {
                 currentPodium.add(podiumEntry);
             }
         });
+    }
+
+    private void sortLeaderboard() {
+        leaderboard.sort(Comparator.comparingLong(e -> e.time));
+        if (leaderboard.size() > 10) {
+            leaderboard.subList(10, leaderboard.size()).clear();
+        }
+    }
+
+    private boolean createLeaderboardFileIfNotPresent(File file) {
+        try {
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                logger.warning("[SRP] Failed to create directories for leaderboard: " + parent.getAbsolutePath());
+                return false;
+            }
+
+            if (!file.exists() && !file.createNewFile()) {
+                logger.warning("[SRP] Failed to create file for leaderboard: " + file.getAbsolutePath());
+                return false;
+            }
+
+            return true;
+        } catch (IOException e) {
+            logger.warning("[SRP] IOException while creating file: " + e.getMessage());
+            return false;
+        }
     }
 }

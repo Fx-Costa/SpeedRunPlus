@@ -1,4 +1,4 @@
-package com.fx.srp.utils;
+package com.fx.srp.util.time;
 
 import lombok.NonNull;
 import org.apache.commons.lang.time.StopWatch;
@@ -33,8 +33,8 @@ public class TimeFormatter {
 
     public TimeFormatter includeHours() {
         long hours = (stopWatch != null)
-                ? TimerUtil.getHours(stopWatch)
-                : TimerUtil.getHours(milliseconds);
+                ? TimeUtil.getHours(stopWatch)
+                : TimeUtil.getHours(milliseconds);
 
         if (hours > 0) {
             this.includeHours = true;
@@ -43,26 +43,26 @@ public class TimeFormatter {
     }
 
     public String format() {
-        long ms = stopWatch != null ? TimerUtil.getMilliseconds(stopWatch) : TimerUtil.getMilliseconds(milliseconds);
-        long sec = stopWatch != null ? TimerUtil.getSeconds(stopWatch) : TimerUtil.getSeconds(milliseconds);
-        long min = stopWatch != null ? TimerUtil.getMinutes(stopWatch) : TimerUtil.getMinutes(milliseconds);
-        long hours = stopWatch != null ? TimerUtil.getHours(stopWatch) : TimerUtil.getHours(milliseconds);
+        long ms = stopWatch != null ? TimeUtil.getMilliseconds(stopWatch) : TimeUtil.getMilliseconds(milliseconds);
+        long sec = stopWatch != null ? TimeUtil.getSeconds(stopWatch) : TimeUtil.getSeconds(milliseconds);
+        long min = stopWatch != null ? TimeUtil.getMinutes(stopWatch) : TimeUtil.getMinutes(milliseconds);
+        long hours = stopWatch != null ? TimeUtil.getHours(stopWatch) : TimeUtil.getHours(milliseconds);
 
         // Build the formatted string
         StringBuilder builder = new StringBuilder();
 
         // Add hours if specified
-        if (includeHours && hours > 0 && useSuffixes) builder.append(hours).append("h ");
-        else if (includeHours && hours > 0) builder.append(hours).append(":");
+        if (includeHours && hours > 0 && useSuffixes) builder.append(String.format("%02d", hours)).append("h ");
+        else if (includeHours && hours > 0) builder.append(String.format("%02d", hours)).append(":");
 
         // Always add minutes, seconds & milliseconds
         // Minutes
-        if (useSuffixes) builder.append(min).append("min ");
-        else builder.append(min).append(":");
+        if (useSuffixes) builder.append(String.format("%02d", min)).append("min ");
+        else builder.append(String.format("%02d", min)).append(":");
 
         // Seconds
-        if (useSuffixes) builder.append(sec).append("sec ");
-        else builder.append(sec);
+        if (useSuffixes) builder.append(String.format("%02d", sec)).append("sec ");
+        else builder.append(String.format("%02d", sec));
 
         // Milliseconds (superscript if specified)
         if (useSuffixes) builder.append(ms).append("ms");
@@ -72,6 +72,7 @@ public class TimeFormatter {
         return builder.toString();
     }
 
+    @SuppressWarnings("all")
     private String superscriptMs(long ms) {
         return String.format("%02d", ms)
                 .replace("0", "\u2070")

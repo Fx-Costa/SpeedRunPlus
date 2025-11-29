@@ -1,8 +1,11 @@
-package com.fx.srp.utils;
+package com.fx.srp.util.ui;
 
+import com.fx.srp.util.time.TimeFormatter;
 import org.apache.commons.lang.time.StopWatch;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
+
+import java.util.List;
 
 public class TimerUtil {
 
@@ -13,8 +16,12 @@ public class TimerUtil {
     private static final String TEAM_SIDEBAR_ANCHOR = "§a";
     private static final String TEAM_TIMER_ANCHOR = "§f";
 
+    public static void createTimer(List<Player> players, StopWatch stopwatch) {
+        players.forEach(player -> createTimer(player, stopwatch));
+    }
+
     // Create a time objective on a given player's scoreboard
-    public static void createTimer(Player player, StopWatch stopWatch) {
+    private static void createTimer(Player player, StopWatch stopWatch) {
         if (player == null || !player.isOnline()) return;
 
         // Get the player's scoreboard and the timer within it, exit prematurely if it already exists
@@ -47,50 +54,6 @@ public class TimerUtil {
 
         // Update the timer
         team.setSuffix(TEAM_TIMER_ANCHOR +  new TimeFormatter(stopWatch).includeHours().superscriptMs().format());
-    }
-
-    public static long getMilliseconds(StopWatch stopWatch) {
-        if (stopWatch == null) return 0;
-        long ms = stopWatch.getTime() % 1000L;
-        return (ms / 10L);  // 2 Digits
-    }
-
-    public static long getSeconds(StopWatch stopWatch) {
-        if (stopWatch == null) return 0;
-        long sec = stopWatch.getTime() / 1000L;
-        return sec % 60;
-    }
-
-    public static long getMinutes(StopWatch stopWatch) {
-        if (stopWatch == null) return 0;
-        long sec = stopWatch.getTime() / 1000L;
-        return sec % 3600 / 60;
-    }
-
-    public static long getHours(StopWatch stopWatch) {
-        if (stopWatch == null) return 0;
-        long sec = stopWatch.getTime() / 1000L;
-        return sec / 3600;
-    }
-
-    public static long getMilliseconds(long milliseconds) {
-        long ms = milliseconds % 1000L;
-        return ms / 10L; // 2 digits
-    }
-
-    public static long getSeconds(long milliseconds) {
-        long sec = milliseconds / 1000L;
-        return sec % 60;
-    }
-
-    public static long getMinutes(long milliseconds) {
-        long sec = milliseconds / 1000L;
-        return (sec % 3600) / 60;
-    }
-
-    public static long getHours(long milliseconds) {
-        long sec = milliseconds / 1000L;
-        return sec / 3600;
     }
 }
 
