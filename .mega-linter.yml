@@ -34,6 +34,19 @@ ENABLE_LINTERS:
   - REPOSITORY_GITLEAKS
   - REPOSITORY_SEMGREP
 
+DISABLE_LINTERS:
+  # YAML
+  - YAML_PRETTIER
+
+  # JSON
+  - JSON_PRETTIER
+
+#####################################
+#         Linter config             #
+#####################################
+JAVA_CHECKSTYLE_CONFIG_FILE: .config/linters/checkstyle.xml
+JAVA_PMD_CONFIG_FILE: .config/linters/pmd.xml
+
 #####################################
 #     Directories to exclude        #
 #####################################

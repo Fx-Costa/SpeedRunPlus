@@ -22,9 +22,21 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Central manager for SRP gameplay, responsible for coordinating active runs,
+ * player management, event handling, and auxiliary utilities.
+ *
+ * <p>This class integrates:</p>
+ * <ul>
+ *     <li>Game mode managers ({@link SoloManager}, {@link BattleManager})</li>
+ *     <li>AFK monitoring via {@link AfkManager}</li>
+ *     <li>Leaderboard management via {@link LeaderboardManager}</li>
+ *     <li>World management via {@link WorldManager}</li>
+ * </ul>
+ */
 public class GameManager {
 
-    private final ActiveRunRegistry runRegistry = ActiveRunRegistry.getInstance();
+    private final ActiveRunRegistry runRegistry = ActiveRunRegistry.getINSTANCE();
 
     // Game modes
     @Getter private final SoloManager soloManager;
@@ -34,6 +46,12 @@ public class GameManager {
     private final AfkManager afkManager;
     private final LeaderboardManager leaderboardManager;
 
+    /**
+     * Constructs a new {@link GameManager} and initializes all sub-managers
+     * and utilities.
+     *
+     * @param plugin the main {@link SpeedRunPlus} plugin instance
+     */
     public GameManager(SpeedRunPlus plugin) {
         this.afkManager = new AfkManager(plugin);
         this.leaderboardManager =  new LeaderboardManager(plugin);
@@ -47,14 +65,33 @@ public class GameManager {
     /* ==========================================================
      *                      Run Management
      * ========================================================== */
-    public Optional<ISpeedrun> getActiveRun(Player p) {
-        return Optional.ofNullable(runRegistry.getActiveRun(p.getUniqueId()));
+    /**
+     * Retrieves the active run a player is currently participating in.
+     *
+     * @param player the player
+     * @return an {@link Optional} containing the {@link ISpeedrun}, or empty if not in a run
+     */
+    public Optional<ISpeedrun> getActiveRun(Player player) {
+        return Optional.ofNullable(runRegistry.getActiveRun(player.getUniqueId()));
     }
 
-    public boolean isInRun(Player p) {
-        return runRegistry.isPlayerInAnyRun(p.getUniqueId());
+    /**
+     * Checks whether a player is currently in any active speedrun.
+     *
+     * @param player the player
+     * @return {@code true} if the player is in a run, {@code false} otherwise
+     */
+    public boolean isInRun(Player player) {
+        return runRegistry.isPlayerInAnyRun(player.getUniqueId());
     }
 
+    /**
+     * Registers a new speedrun for all associated players.
+     *
+     * <p>Starts AFK monitoring as a side effect.</p>
+     *
+     * @param run the {@link ISpeedrun} to register
+     */
     public void registerRun(ISpeedrun run) {
         run.getSpeedrunners().forEach(player ->
                 runRegistry.addRun(player.getPlayer().getUniqueId(), run)
@@ -64,6 +101,13 @@ public class GameManager {
         startAfkMonitoring();
     }
 
+    /**
+     * Unregisters a speedrun and removes all participating players from the registry.
+     *
+     * <p>Stops AFK monitoring as a side effect.</p>
+     *
+     * @param run the {@link ISpeedrun} to unregister
+     */
     public void unregisterRun(ISpeedrun run) {
         run.getSpeedrunners().forEach(player ->
                 runRegistry.removeRun(player.getPlayer().getUniqueId())
@@ -75,6 +119,15 @@ public class GameManager {
         }
     }
 
+    /**
+     * Finishes a speedrun for a specific player and updates the leaderboard.
+     *
+     * <p>Delegates to the appropriate manager depending on the run type
+     * (e.g.: {@link BattleSpeedrun}).</p>
+     *
+     * @param run the {@link ISpeedrun} to finish
+     * @param player the player responsible for finishing the run (nullable)
+     */
     public void finishRun(ISpeedrun run, Player player) {
         if (run instanceof SoloSpeedrun) soloManager.stop((SoloSpeedrun) run, player);
         if (run instanceof BattleSpeedrun) battleManager.stop((BattleSpeedrun) run, player);
@@ -83,14 +136,22 @@ public class GameManager {
         if (player != null) leaderboardManager.finishRun(player, run.getStopWatch().getTime());
     }
 
+    /**
+     * Aborts and finishes all active runs without specifying a finishing player.
+     */
     public void stopAllRuns() {
         // Abort all runs
-        ActiveRunRegistry.getInstance().getAllRuns().forEach(run -> finishRun(run, null));
+        ActiveRunRegistry.getINSTANCE().getAllRuns().forEach(run -> finishRun(run, null));
     }
 
     /* ==========================================================
      *                    Player management
      * ========================================================== */
+    /**
+     * Returns a list of all {@link Player}s currently participating in any active run.
+     *
+     * @return list of players
+     */
     public List<Player> getAllPlayersInRuns() {
         return runRegistry.getAllPlayersInRuns().stream()
                 .map(Bukkit::getPlayer)
@@ -98,6 +159,12 @@ public class GameManager {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves the {@link Speedrunner} object representing a player in their active run.
+     *
+     * @param player the player
+     * @return an {@link Optional} containing the {@link Speedrunner}, or empty if not in a run
+     */
     public Optional<Speedrunner> getSpeedrunner(Player player) {
         return getActiveRun(player).flatMap(run -> run.getSpeedrunners().stream()
                 .filter(runner -> runner.getPlayer().equals(player))
@@ -107,6 +174,14 @@ public class GameManager {
     /* ==========================================================
      *                    Event management
      * ========================================================== */
+    /**
+     * Handles player movement events.
+     *
+     * <p>Freezes movement if the player is marked as frozen and updates AFK activity.</p>
+     *
+     * @param player the player who moved
+     * @param event the {@link PlayerMoveEvent} triggered
+     */
     public void handlePlayerMove(Player player, PlayerMoveEvent event) {
         getSpeedrunner(player).ifPresent(runner -> {
             if (runner.isFrozen()) {
@@ -117,6 +192,14 @@ public class GameManager {
         });
     }
 
+    /**
+     * Handles player interaction events.
+     *
+     * <p>Cancels interactions if the player is frozen and updates AFK activity.</p>
+     *
+     * @param player the player who interacted
+     * @param event the {@link PlayerInteractEvent} triggered
+     */
     public void handlePlayerInteract(Player player, PlayerInteractEvent event) {
         getSpeedrunner(player).ifPresent(runner -> {
             if (runner.isFrozen()) {
@@ -126,10 +209,22 @@ public class GameManager {
         });
     }
 
+    /**
+     * Handles player quit events by notifying the active run they left.
+     *
+     * @param player the player who quit
+     */
     public void handlePlayerQuit(Player player) {
         getActiveRun(player).ifPresent(run -> run.onPlayerLeave(player));
     }
 
+    /**
+     * Handles player respawn events.
+     *
+     * <p>Delegates to the active run to manage respawning.</p>
+     *
+     * @param event the {@link PlayerRespawnEvent} triggered
+     */
     public void handlePlayerRespawn(PlayerRespawnEvent event) {
         getSpeedrunner(event.getPlayer()).ifPresent(speedrunner ->
                 getActiveRun(event.getPlayer()).ifPresent(run ->
@@ -141,7 +236,7 @@ public class GameManager {
     /* ==========================================================
      *                      AFK Monitoring
      * ========================================================== */
-    public void startAfkMonitoring() {
+    private void startAfkMonitoring() {
         afkManager.startAfkChecker(
                 this::getAllPlayersInRuns,
                 player -> getActiveRun(player).ifPresent(run ->

@@ -7,7 +7,11 @@ import com.onarandombox.MultiverseCore.api.MVWorldManager;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import com.onarandombox.MultiverseNetherPortals.MultiverseNetherPortals;
 import lombok.Getter;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.PortalType;
+import org.bukkit.World;
+import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Consumer;
 
@@ -17,6 +21,22 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Handles creation, management, and deletion of speedrun worlds for players.
+ *
+ * <p>This class relies on Multiverse-Core and Multiverse-Nether-Portals to manage
+ * multiple isolated world sets per player. Each player can have an Overworld, Nether,
+ * and End world linked together. It also ensures leftover worlds from previous sessions
+ * are cleaned up on plugin initialization.</p>
+ *
+ * <p>Main responsibilities:</p>
+ * <ul>
+ *     <li>Create world sets for one or more players with optional seeds.</li>
+ *     <li>Delete world sets for speedrunners and clean up resources.</li>
+ *     <li>Link and unlink worlds for proper portal traversal.</li>
+ *     <li>Ensure unique world names to prevent collisions.</li>
+ * </ul>
+ */
 public class WorldManager {
 
     private final ConfigHandler configHandler = ConfigHandler.getInstance();
@@ -25,6 +45,37 @@ public class WorldManager {
     private final MVWorldManager mvWorldManager;
     private final MultiverseNetherPortals portalManager;
 
+    /**
+     * Represents a player's set of worlds: Overworld, Nether, End.
+     * Provides the spawn location for teleportation purposes.
+     */
+    @Getter
+    public static class WorldSet {
+        private final MultiverseWorld overworld;
+        private final MultiverseWorld nether;
+        private final MultiverseWorld end;
+        private final Location spawn;
+
+        /**
+         * Constructs a set of worlds with a default spawn point.
+         *
+         * @param overworld The {@code MultiverseWorld} overworld.
+         * @param nether The {@code MultiverseWorld} nether.
+         * @param end The {@code MultiverseWorld} end.
+         */
+        public WorldSet(MultiverseWorld overworld, MultiverseWorld nether, MultiverseWorld end) {
+            this.overworld = overworld;
+            this.nether = nether;
+            this.end = end;
+            this.spawn = overworld.getSpawnLocation();
+        }
+    }
+
+    /**
+     * Constructs the world manager and removes leftover SRP worlds from previous sessions.
+     *
+     * @param plugin The main plugin instance.
+     */
     public WorldManager(SpeedRunPlus plugin) {
         this.mvWorldManager = plugin.getMvWorldManager();
         this.portalManager = plugin.getPortalManager();
@@ -34,24 +85,17 @@ public class WorldManager {
         cleanupLeftoverSrpWorlds();
     }
 
-    @Getter
-    public static class WorldSet {
-        private final MultiverseWorld overworld;
-        private final MultiverseWorld nether;
-        private final MultiverseWorld end;
-        private final Location spawn;
-
-        public WorldSet(MultiverseWorld overworld, MultiverseWorld nether, MultiverseWorld end) {
-            this.overworld = overworld;
-            this.nether = nether;
-            this.end = end;
-            this.spawn = overworld.getSpawnLocation();
-        }
-    }
-
     /* ==========================================================
      *                 WORLD CREATION (N PLAYERS)
      * ========================================================== */
+    /**
+     * Creates world sets for multiple players.
+     *
+     * @param players  The players who need worlds.
+     * @param seed     Optional world seed.
+     * @param callback Callback executed when all worlds are ready. Receives a map
+     *                 linking each player's UUID to their WorldSet.
+     */
     public void createWorldsForPlayers(
             Collection<Player> players,
             Long seed,
@@ -127,6 +171,12 @@ public class WorldManager {
     /* ==========================================================
      *                  WORLD DELETION (N PLAYERS)
      * ========================================================== */
+    /**
+     * Deletes the world sets for multiple speedrunners.
+     *
+     * @param speedrunners The speedrunners whose worlds are to be deleted.
+     * @param callback     Callback invoked after all worlds are deleted.
+     */
     public void deleteWorldsForPlayers(Collection<Speedrunner> speedrunners, Runnable callback) {
         AtomicInteger done = new AtomicInteger(0);
         int total = speedrunners.size();
@@ -196,12 +246,12 @@ public class WorldManager {
 
     private String getWorldName(String baseName) {
         String name = baseName;
-        int i = 1;
+        int accumulator = 1;
 
         // Check Bukkit world registry – Multiverse loads worlds here
         while (Bukkit.getWorld(name) != null) {
-            name = baseName + "_" + i;
-            i++;
+            name = baseName + "_" + accumulator;
+            accumulator++;
         }
         return name;
     }

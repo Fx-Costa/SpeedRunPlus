@@ -31,6 +31,7 @@ timer:
 
 # Podium configuration
 podium:
+  max: 10
   world: world
   positions:
     1:

@@ -40,6 +40,14 @@ public enum GameMode {
     // Whether the game mode is multiplayer
     private final boolean isMultiplayer;
 
+    /**
+     * Creates a game mode for SRPCommands.
+     *
+     * @param name           the name of the game mode
+     * @param actions        all supported actions for this game mode
+     * @param allowedActions actions permissible during an active run
+     * @param isMultiplayer  whether the mode supports multiple players
+     */
     GameMode(String name, Set<Action> actions, Set<Action> allowedActions, boolean isMultiplayer) {
         this.name = name;
         this.actions = actions;
@@ -47,14 +55,33 @@ public enum GameMode {
         this.isMultiplayer = isMultiplayer;
     }
 
+    /**
+     * Checks whether the given action is valid for this game mode.
+     *
+     * @param action the action to test
+     * @return {@code true} if the action is supported by this mode, otherwise {@code false}
+     */
     public boolean isValidAction(Action action) {
         return actions.contains(action);
     }
 
+    /**
+     * Determines whether the given action is permitted while a run
+     * in this game mode is currently active.
+     *
+     * @param action the action to test
+     * @return {@code true} if this action is allowed during a run
+     */
     public boolean isAllowedDuringRun(Action action) {
         return allowedDuringRun.contains(action);
     }
 
+    /**
+     * Attempts to match a string to a {@link GameMode} by its command name.
+     *
+     * @param input the user-provided game mode name
+     * @return the matching {@code GameMode}, or {@code null} if none match
+     */
     public static GameMode parse(String input) {
         for (GameMode gm : values()) {
             if (gm.name.equalsIgnoreCase(input)) return gm;

@@ -3,6 +3,7 @@ package com.fx.srp.listeners;
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.model.run.AbstractSpeedrun;
 import com.fx.srp.model.run.ISpeedrun;
+import lombok.AllArgsConstructor;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,15 +12,27 @@ import org.bukkit.event.entity.EntityDeathEvent;
 
 import java.util.Optional;
 
+/**
+ * Listens for world-related events relevant to SRP gameplay and delegates
+ * handling to {@link GameManager}.
+ *
+ * <p>This listener currently handles events such as entity deaths, specifically
+ * the Ender Dragon, to determine if a speedrun has been completed.</p>
+ */
+@AllArgsConstructor
 @SuppressWarnings("unused")
 public class WorldEventListener implements Listener {
 
     private final GameManager gameManager;
 
-    public WorldEventListener(GameManager gameManager) {
-        this.gameManager = gameManager;
-    }
-
+    /**
+     * Handles {@link EntityDeathEvent} for the Ender Dragon.
+     *
+     * <p>This allows speedruns that depend on killing the Ender Dragon to be
+     * automatically completed when the dragon dies.</p>
+     *
+     * @param event the entity death event triggered in the world
+     */
     @EventHandler
     public void onDragonDeath(EntityDeathEvent event) {
         if (event.getEntityType() != EntityType.ENDER_DRAGON) return;

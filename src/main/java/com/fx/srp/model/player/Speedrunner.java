@@ -15,7 +15,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Represents a player participating in a speedrun, tracking their state,
+ * stopwatch, worlds, and providing utilities to freeze, restore, or reset the player.
+ */
 @Getter
 public class Speedrunner {
 
@@ -28,7 +33,7 @@ public class Speedrunner {
     @Setter private int savedLevel;
     @Setter private float savedExp;
     @Setter private GameMode savedGameMode;
-    private boolean freeze = false;
+    private boolean playerFreeze;
 
     // Worlds
     @Getter @Setter private WorldManager.WorldSet worldSet;
@@ -36,6 +41,12 @@ public class Speedrunner {
     // Stopwatch
     private final StopWatch stopWatch;
 
+    /**
+     * Constructs a Speedrunner for the given player and stopwatch.
+     *
+     * @param player    The player being wrapped.
+     * @param stopWatch The stopwatch to track the player's run time.
+     */
     public Speedrunner(Player player, StopWatch stopWatch) {
         this.player = player;
         this.stopWatch = stopWatch;
@@ -44,6 +55,9 @@ public class Speedrunner {
     /* ==========================================================
      *                      Player states
      * ========================================================== */
+    /**
+     * Freezes the player: disables movement.
+     */
     public void freeze(){
         if (!isFrozen()){
             player.setWalkSpeed(0f);
@@ -57,23 +71,35 @@ public class Speedrunner {
                     false,
                     false
             ));
-            this.freeze = true;
+            this.playerFreeze = true;
         }
     }
 
+    /**
+     * Unfreezes the player, restoring movement.
+     */
     public void unfreeze(){
         if (isFrozen()){
             player.setWalkSpeed(0.2f);
             player.setFlySpeed(0.1f);
             player.removePotionEffect(PotionEffectType.JUMP);
-            this.freeze = false;
+            this.playerFreeze = false;
         }
     }
 
+    /**
+     * Checks if the player is currently frozen.
+     *
+     * @return {@code true} if frozen, {@code false} otherwise.
+     */
     public boolean isFrozen(){
-        return freeze;
+        return playerFreeze;
     }
 
+    /**
+     * Captures the player's current state (inventory, armor, level, experience,
+     * game mode, and advancements) to allow later restoration.
+     */
     public void captureState(){
         // Save the player state
         setSavedGameMode(player.getGameMode());
@@ -84,6 +110,17 @@ public class Speedrunner {
         setSavedAdvancements(clonePlayerAdvancements(player));
     }
 
+    /**
+     * Resets the player's state to a neutral baseline:
+     * <ul>
+     *     <li>GameMode set to SURVIVAL</li>
+     *     <li>Health, hunger, experience reset</li>
+     *     <li>Potion effects removed</li>
+     *     <li>Inventory cleared</li>
+     *     <li>Advancements revoked</li>
+     * </ul>
+     * Prepares the player for a fresh speedrun attempt.
+     */
     public void resetState(){
         // Reset the player state
         resetPlayerStats(player);
@@ -94,6 +131,10 @@ public class Speedrunner {
         player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
     }
 
+    /**
+     * Restores the player's state to the previously captured state.
+     * This includes inventory, armor, level, experience, game mode, and awarded advancements.
+     */
     public void restoreState(){
         // Reset the player state
         resetState();
@@ -136,7 +177,7 @@ public class Speedrunner {
     }
 
     private Map<Advancement, Set<String>> clonePlayerAdvancements(Player player){
-        Map<Advancement, Set<String>> advancements = new HashMap<>();
+        Map<Advancement, Set<String>> advancements = new ConcurrentHashMap<>();
         Bukkit.getServer().advancementIterator().forEachRemaining(advancement -> {
             AdvancementProgress progress = player.getAdvancementProgress(advancement);
             if (!progress.getAwardedCriteria().isEmpty()) {

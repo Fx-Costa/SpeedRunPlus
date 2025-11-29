@@ -19,6 +19,21 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Abstract base class for managing game mode logic in SRP.
+ *
+ * <p>This class provides common functionality for all game modes, such as:
+ * <ul>
+ *     <li>Run initialization and state management</li>
+ *     <li>Countdown timers before starting runs</li>
+ *     <li>World creation and reset for players</li>
+ *     <li>Run finishing and cleanup</li>
+ *     <li>Scheduling repeated tick updates and run timeouts</li>
+ * </ul>
+ * </p>
+ *
+ * @param <T> the specific type of {@link AbstractSpeedrun} this manager handles
+ */
 @AllArgsConstructor
 public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implements IGameModeManager<T> {
 
@@ -31,6 +46,11 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     /* ==========================================================
      *                COMMON INITIALIZATION
      * ========================================================== */
+    /**
+     * Initializes a new run and setting the state to {@link AbstractSpeedrun.State#CREATING_WORLDS}.
+     *
+     * @param run the run to initialize
+     */
     protected void initializeRun(T run) {
         run.setState(AbstractSpeedrun.State.CREATING_WORLDS);
     }
@@ -38,6 +58,15 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     /* ==========================================================
      *                COMMON COUNTDOWN LOGIC
      * ========================================================== */
+    /**
+     * Starts a countdown before a run begins.
+     *
+     * <p>After a short delay, the run will transition to the running state,
+     * the stopwatch will start, and players will be un-frozen.</p>
+     *
+     * @param run the run to start
+     * @param players the collection of {@link Speedrunner}s participating
+     */
     protected void startCountdown(T run, Collection<Speedrunner> players) {
         // Delay slightly to let the world load
         Bukkit.getScheduler().runTaskLater(plugin, () -> start(run, players), 20L);
@@ -49,7 +78,7 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
         run.initializeTimers();
 
         new BukkitRunnable() {
-            int seconds = configHandler.getTimerCountdown();
+            /* default */ int seconds = configHandler.getTimerCountdown();
 
             @Override
             public void run() {
@@ -107,6 +136,19 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     /* ==========================================================
      *                COMMON RESET LOGIC
      * ========================================================== */
+    /**
+     * Resets a player's world for a run by:
+     * <ul>
+     *     <li>Freezing the player</li>
+     *     <li>Creating new worlds for the player</li>
+     *     <li>Teleporting and restoring player state</li>
+     *     <li>Deleting old worlds and assigning new ones</li>
+     * </ul>
+     *
+     * @param speedrunner the player to reset
+     * @param seed optional seed for world generation
+     * @param afterWorldDeletion callback to run after old worlds are deleted
+     */
     protected void recreateWorldsForReset(
             Speedrunner speedrunner,
             Long seed,
@@ -149,6 +191,17 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     /* ==========================================================
      *                COMMON STOP LOGIC
      * ========================================================== */
+    /**
+     * Finishes a run, performing cleanup tasks including:
+     * <ul>
+     *     <li>Stopping the stopwatch and canceling scheduled tasks</li>
+     *     <li>Freezing and restoring player states</li>
+     *     <li>Deleting worlds via {@link WorldManager}</li>
+     *     <li>Unregistering the run from {@link GameManager}</li>
+     * </ul>
+     *
+     * @param run the run to finish
+     */
     protected void finishRun(T run) {
         run.setState(AbstractSpeedrun.State.FINISHED);
 
@@ -184,6 +237,14 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     /* ==========================================================
      *                COMMON TIMER LOGIC
      * ========================================================== */
+    /**
+     * Schedules a task to run after the maximum allowed run time has elapsed.
+     *
+     * <p>If the run is still running, the provided {@code timeoutHandler} is executed.</p>
+     *
+     * @param run the run to monitor
+     * @param timeoutHandler the action to execute on timeout
+     */
     protected void scheduleTimeoutTask(T run, Runnable timeoutHandler) {
         long ticks = configHandler.getMaxRunTime() / 50L;
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -195,6 +256,14 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
         run.setTimeoutTask(task);
     }
 
+    /**
+     * Schedules a repeating task that executes every few ticks to update run-specific logic.
+     *
+     * <p>Typically used for updating player timers, HUDs, or other periodic tasks.</p>
+     *
+     * @param run the run associated with the task
+     * @param tickAction the action to execute each tick
+     */
     protected void scheduleRepeatingTickTask(T run, Consumer<T> tickAction) {
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (run.getState() == AbstractSpeedrun.State.RUNNING) {
@@ -207,6 +276,11 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
         run.setTimerUpdateTask(task);
     }
 
+    /**
+     * Cancels any scheduled timer update or timeout tasks associated with a run.
+     *
+     * @param run the run whose tasks should be canceled
+     */
     protected void cancelTasks(T run) {
         if (run.getTimerUpdateTask() != null) run.getTimerUpdateTask().cancel(); run.setTimerUpdateTask(null);
         if (run.getTimeoutTask() != null) run.getTimeoutTask().cancel(); run.setTimeoutTask(null);

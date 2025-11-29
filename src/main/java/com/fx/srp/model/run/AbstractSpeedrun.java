@@ -13,7 +13,15 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
 
-abstract public class AbstractSpeedrun implements ISpeedrun {
+/**
+ * Represents a generic speedrun session for a player or group of players.
+ * <p>
+ * This abstract class provides core functionality for starting, stopping, and
+ * managing a speedrun, including stopwatch handling, state management, seed tracking,
+ * and player respawn handling.
+ * </p>
+ */
+public abstract class AbstractSpeedrun implements ISpeedrun {
 
     protected final GameManager gameManager;
 
@@ -29,6 +37,14 @@ abstract public class AbstractSpeedrun implements ISpeedrun {
 
     @Getter @Setter protected BukkitTask timeoutTask;
 
+    /**
+     * Constructs a new speedrun instance.
+     *
+     * @param gameManager The {@code GameManager} managing this run.
+     * @param owner       The {@code Speedrunner} who owns or participates in this run.
+     * @param stopWatch   The {@code StopWatch} instance to track elapsed time.
+     * @param seed        Optional seed for world generation. May be {@code null}.
+     */
     public AbstractSpeedrun(GameManager gameManager, Speedrunner owner, StopWatch stopWatch, Long seed) {
         this.gameManager = gameManager;
         this.owner = owner;
@@ -36,14 +52,38 @@ abstract public class AbstractSpeedrun implements ISpeedrun {
         this.seed = seed;
     }
 
+    /**
+     * Returns the list of players participating in this speedrun.
+     *
+     * @return an immutable {@code List} containing the Speedrunner(s).
+     */
     public List<Speedrunner> getSpeedrunners() {
         return List.of(owner);
     }
 
+    /**
+     * Called when a player leaves the server during this speedrun.
+     * <p>
+     * By default, this finishes the run for all participants without
+     * awarding a winner.
+     * </p>
+     *
+     * @param player The {@code Player} who left the server.
+     */
     public void onPlayerLeave(Player player) {
         gameManager.finishRun(this, null);
     }
 
+    /**
+     * Handles player respawn during the speedrun.
+     * <p>
+     * If the player respawns outside the speedrun worlds, their respawn
+     * location is overridden to the overworld spawn of the speedrun.
+     * </p>
+     *
+     * @param speedrunner The {@code Speedrunner} who respawned.
+     * @param event       The {@code PlayerRespawnEvent} to modify.
+     */
     public void onPlayerRespawn(Speedrunner speedrunner, PlayerRespawnEvent event) {
         WorldManager.WorldSet worlds = speedrunner.getWorldSet();
 

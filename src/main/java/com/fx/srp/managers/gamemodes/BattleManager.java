@@ -17,12 +17,33 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Manager responsible for handling all aspects of the Battle game mode (1v1 speedrun battles).
+ *
+ * <p>Responsibilities include:</p>
+ * <ul>
+ *     <li>Handling SRP battle commands: {@link Action#REQUEST}, {@link Action#ACCEPT},
+ *     {@link Action#DECLINE}, {@link Action#RESET}, {@link Action#SURRENDER}</li>
+ *     <li>Tracking pending battle requests and enforcing timeouts</li>
+ *     <li>Starting and stopping {@link BattleSpeedrun} instances</li>
+ *     <li>Resetting player worlds and state</li>
+ *     <li>Determining winners and results</li>
+ * </ul>
+ */
 public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
 
     // Track battle requests
-    private final Map<UUID, PendingRequest> pendingRequests = new HashMap<>();
+    private final Map<UUID, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
 
+    /**
+     * Constructs a new BattleManager.
+     *
+     * @param plugin the main {@link SpeedRunPlus} plugin instance
+     * @param gameManager the {@link GameManager} for run registration and player management
+     * @param worldManager the {@link WorldManager} for creating and deleting worlds
+     */
     public BattleManager(SpeedRunPlus plugin, GameManager gameManager, WorldManager worldManager) {
         super(plugin, gameManager, worldManager);
     }
@@ -30,6 +51,15 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       COMMANDS
      * ========================================================== */
+    /**
+     * Handles a {@link SRPCommand} for a battle player.
+     *
+     * <p>Delegates to the appropriate method based on the {@link Action}:
+     * REQUEST, ACCEPT, DECLINE, RESET, SURRENDER.</p>
+     *
+     * @param player the player executing the command
+     * @param command the parsed {@link SRPCommand}
+     */
     @Override
     public void handleCommand(Player player, SRPCommand command) {
         Action action = command.getAction();
@@ -47,6 +77,14 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       REQUEST BATTLE
      * ========================================================== */
+    /**
+     * Sends a battle request from one player to another.
+     *
+     * <p>Sends messages to both players and schedules a timeout for the request.</p>
+     *
+     * @param challenger the player initiating the request
+     * @param challengee the player being challenged
+     */
     public void request(Player challenger, Player challengee) {
         // A player cannot challenge nobody
         if (challengee == null) {
@@ -122,6 +160,13 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       ACCEPT BATTLE
      * ========================================================== */
+    /**
+     * Accepts a pending battle request and starts a {@link BattleSpeedrun}.
+     *
+     * <p>Sets up a shared {@link StopWatch}, captures player states, and more.</p>
+     *
+     * @param challengee the player accepting the request
+     */
     @Override
     public void start(Player challengee) {
         PendingRequest request = pendingRequests.remove(challengee.getUniqueId());
@@ -133,15 +178,21 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
         Bukkit.getScheduler().cancelTask(request.getTimeoutTaskId());
 
         // Setup stopwatch
-        StopWatch sw = new StopWatch();
-        Speedrunner challengerSpeedrunner = new Speedrunner(challenger, sw);
-        Speedrunner challengeeSpeedrunner = new Speedrunner(challengee, sw);
+        StopWatch stopWatch = new StopWatch();
+        Speedrunner challengerSpeedrunner = new Speedrunner(challenger, stopWatch);
+        Speedrunner challengeeSpeedrunner = new Speedrunner(challengee, stopWatch);
 
         // Capture the players' state - their inventory, levels, etc.
         challengerSpeedrunner.captureState();
         challengeeSpeedrunner.captureState();
 
-        BattleSpeedrun battleSpeedrun = new BattleSpeedrun(gameManager, challengerSpeedrunner, challengeeSpeedrunner, sw, null);
+        BattleSpeedrun battleSpeedrun = new BattleSpeedrun(
+                gameManager,
+                challengerSpeedrunner,
+                challengeeSpeedrunner,
+                stopWatch,
+                null
+        );
         gameManager.registerRun(battleSpeedrun);
 
         initializeRun(battleSpeedrun);
@@ -175,6 +226,14 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       RESET BATTLE
      * ========================================================== */
+    /**
+     * Resets the worlds and state of a player in a {@link BattleSpeedrun}.
+     *
+     * <p>Teleports the player, recreates worlds, and restores state.</p>
+     *
+     * @param battleSpeedrun the battle run to reset
+     * @param player the player requesting the reset
+     */
     @Override
     public void reset(BattleSpeedrun battleSpeedrun, Player player) {
         // If not already in a run
@@ -198,6 +257,14 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       DECLINE BATTLE
      * ========================================================== */
+    /**
+     * Declines a pending battle request.
+     *
+     * <p>Removes the pending request and cancels its timeout task.
+     * Sends messages to both the challengee and the challenger.</p>
+     *
+     * @param challengee the player declining the request
+     */
     public void decline(Player challengee) {
         UUID challengeeUUID = challengee.getUniqueId();
 
@@ -208,8 +275,8 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
         }
 
         PendingRequest request = pendingRequests.remove(challengeeUUID);
-        int id = request.getTimeoutTaskId();
-        if (id > 0) Bukkit.getScheduler().cancelTask(request.getTimeoutTaskId());
+        int taskId = request.getTimeoutTaskId();
+        if (taskId > 0) Bukkit.getScheduler().cancelTask(request.getTimeoutTaskId());
 
         // Decline the battle
         Player challenger = Bukkit.getPlayer(request.getPlayerUUID());
@@ -225,6 +292,13 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       SURRENDER
      * ========================================================== */
+    /**
+     * Allows a player to surrender in an active {@link BattleSpeedrun}.
+     *
+     * <p>Determines the winner (the opponent) and ends the battle via {@link #stop}.</p>
+     *
+     * @param player the surrendering player
+     */
     public void surrender(Player player){
         // If not in an active battleSpeedrun
         if (!gameManager.isInRun(player)) {
@@ -243,7 +317,7 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
         // Determine winner and loser
         Player challenger = battleSpeedrun.getChallenger().getPlayer();
         Player challengee = battleSpeedrun.getChallengee().getPlayer();
-        Player winner = (player.equals(challenger)) ? challengee : challenger;
+        Player winner = player.equals(challenger) ? challengee : challenger;
 
         // End the battleSpeedrun
         stop(battleSpeedrun, winner);
@@ -252,19 +326,32 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     /* ==========================================================
      *                       STOP BATTLE
      * ========================================================== */
+    /**
+     * Stops a {@link BattleSpeedrun}, showing results to both players.
+     *
+     * <p>Displays titles with winner/loser information and formatted run time.
+     * Calls {@link AbstractGameModeManager#finishRun} for cleanup.</p>
+     *
+     * @param battleSpeedrun the battle run to stop
+     * @param winner the player who won (null if time expired)
+     */
     @Override
     public void stop(BattleSpeedrun battleSpeedrun, Player winner) {
         battleSpeedrun.setState(AbstractSpeedrun.State.FINISHED);
 
         // Get the final time
         String formattedTime = new TimeFormatter(battleSpeedrun.getStopWatch())
-                .includeHours()
-                .superscriptMs()
+                .withHours()
+                .withSuperscriptMs()
                 .format();
 
         if (winner == null) {
-            battleSpeedrun.getChallenger().getPlayer().sendTitle(ChatColor.RED + "Time's up!", "", 10, 140, 20);
-            battleSpeedrun.getChallengee().getPlayer().sendTitle(ChatColor.RED + "Time's up!", "", 10, 140, 20);
+            battleSpeedrun.getChallenger().getPlayer().sendTitle(
+                    ChatColor.RED + "Time's up!", "", 10, 140, 20
+            );
+            battleSpeedrun.getChallengee().getPlayer().sendTitle(
+                    ChatColor.RED + "Time's up!", "", 10, 140, 20
+            );
         }
         else {
             winner.sendTitle(
@@ -293,12 +380,13 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
      *                       HELPERS
      * ========================================================== */
     private Player getOpponent(BattleSpeedrun battleSpeedrun, Player player) {
-        if (battleSpeedrun.getChallenger().getPlayer().equals(player)) return battleSpeedrun.getChallengee().getPlayer();
-        return battleSpeedrun.getChallenger().getPlayer();
+        Player challenger = battleSpeedrun.getChallenger().getPlayer();
+        if (challenger.equals(player)) return battleSpeedrun.getChallengee().getPlayer();
+        return challenger;
     }
 
-    protected Optional<BattleSpeedrun> getActiveRun(Player p) {
-        return gameManager.getActiveRun(p).filter(r -> r instanceof BattleSpeedrun)
+    private Optional<BattleSpeedrun> getActiveRun(Player player) {
+        return gameManager.getActiveRun(player).filter(r -> r instanceof BattleSpeedrun)
                 .map(r -> (BattleSpeedrun) r);
     }
 }

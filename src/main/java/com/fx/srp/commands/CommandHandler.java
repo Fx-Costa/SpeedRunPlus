@@ -2,6 +2,7 @@ package com.fx.srp.commands;
 
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.model.player.Speedrunner;
+import lombok.AllArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -16,6 +17,15 @@ import java.util.function.BiFunction;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+/**
+ * Handles execution and tab-completion of all SRP-related commands.
+ * <p>
+ * This class parses player input using {@link SRPCommandParser}, checks
+ * permissions and gameplay constraints, and delegates execution to the
+ * appropriate game-mode manager via {@link GameManager}.
+ * </p>
+ */
+@AllArgsConstructor
 public class CommandHandler implements CommandExecutor, TabCompleter {
 
     private final Logger logger = Bukkit.getLogger();
@@ -23,10 +33,16 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
     private final GameManager gameManager;
     private final SRPCommandParser parser = new SRPCommandParser();
 
-    public CommandHandler(GameManager gameManager) {
-        this.gameManager = gameManager;
-    }
-
+    /**
+     * Executes an SRP command issued by a player.
+     *
+     * @param sender        the entity that executed the command; must be a player
+     * @param command       the Bukkit command object
+     * @param commandString the raw command label used
+     * @param args          the command arguments supplied by the player
+     *
+     * @return {@code true} always, as feedback is handled internally
+     */
     @Override
     public boolean onCommand(@NotNull CommandSender sender,
                              @NotNull Command command,
@@ -55,7 +71,8 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
     private boolean canUseCommand(Player player, SRPCommand command) {
         // OPs bypass everything
-        if (player.hasPermission("srp.admin")) return true;
+        String srp = SRPCommand.getSrp();
+        if (player.hasPermission(srp + ".admin")) return true;
 
         GameMode gameMode = command.getGameMode();
         Action action = command.getAction();
@@ -68,29 +85,31 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         }
 
         // Restrictions during an active run
-        if (gameManager.isInRun(player)) {
-            if (!gameMode.isAllowedDuringRun(action)) {
-                player.sendMessage(ChatColor.RED + "You cannot use this command during a run!");
-                return false;
-            }
+        if (gameManager.isInRun(player) && !gameMode.isAllowedDuringRun(action)) {
+            player.sendMessage(ChatColor.RED + "You cannot use this command during a run!");
+            return false;
         }
 
         // Enforce permissions
         // Overall usage
-        if (!player.hasPermission("srp.use")) {
+        if (!player.hasPermission(srp + ".use")) {
             player.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
             return false;
         }
 
         // Gamemode-specific permission
-        if (!player.hasPermission("srp." + gameMode.getName().toLowerCase())) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to use the " + gameMode.getName() + " gamemode!");
+        String gameModeName = gameMode.getName().toLowerCase();
+        if (!player.hasPermission(srp + "." + gameModeName)) {
+            player.sendMessage(
+                    ChatColor.RED + "You do not have permission to use the " + gameModeName + " gamemode!"
+            );
             return false;
         }
 
         // Action-specific permission
-        if (!player.hasPermission("srp." + gameMode.getName().toLowerCase() + "." + action.getName().toLowerCase())) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to " + action.getName() + "!");
+        String actionName = action.getName().toLowerCase();
+        if (!player.hasPermission(srp + "." + gameModeName + "." + actionName)) {
+            player.sendMessage(ChatColor.RED + "You do not have permission to use " + actionName + "!");
             return false;
         }
 
@@ -106,6 +125,16 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         }
     }
 
+    /**
+     * Provides dynamic in-game tab-completion for SRP commands.
+     *
+     * @param sender the entity requesting tab completion (player-only)
+     * @param command the root Bukkit command
+     * @param alias the alias used
+     * @param args the arguments typed so far
+     *
+     * @return a list of valid completion options or an empty list if none apply
+     */
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender,
                                       @NotNull Command command,
@@ -117,9 +146,10 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         // Helper: filter list by input
         BiFunction<Collection<String>, String, List<String>> filterByInput = (list, input) ->
                 list.stream()
-                        .filter(s -> s.toLowerCase().startsWith(input.toLowerCase()))
+                        .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(input.toLowerCase(Locale.ROOT)))
                         .collect(Collectors.toList());
 
+        String srp = SRPCommand.getSrp();
         switch (args.length) {
 
             // At: /srp <TAB>
@@ -127,7 +157,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                 // Filtering by game modes the player has permission
                 List<String> allowedGamemodes = Arrays.stream(GameMode.values())
                         .map(GameMode::getName)
-                        .filter(mode -> player.hasPermission("srp." + mode.toLowerCase()))
+                        .filter(mode -> player.hasPermission(srp + "." + mode.toLowerCase()))
                         .collect(Collectors.toList());
 
                 return filterByInput.apply(allowedGamemodes, args[0]);
@@ -137,12 +167,15 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             case 2: {
                 // Filtering by actions based on the selected game mode the player has permission
                 GameMode mode = GameMode.parse(args[0]);
-                if (mode == null || !player.hasPermission("srp." + mode.getName().toLowerCase()))
+                if (mode == null || !player.hasPermission(srp + "." + mode.getName().toLowerCase()))
                     return Collections.emptyList();
 
+                String gameModeName = mode.getName().toLowerCase();
                 List<String> allowedActions = mode.getActions().stream()
                         .map(Action::getName)
-                        .filter(name -> player.hasPermission("srp." + mode.getName().toLowerCase() + "." + name.toLowerCase()))
+                        .filter(name ->
+                                player.hasPermission(srp + "." + gameModeName + "." + name.toLowerCase())
+                        )
                         .collect(Collectors.toList());
 
                 return filterByInput.apply(allowedActions, args[1]);
@@ -152,7 +185,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             case 3: {
                 // Filtering by online players if the game mode is multiplayer and the player has permission
                 GameMode mode = GameMode.parse(args[0]);
-                if (mode == null || !mode.isMultiplayer()|| !player.hasPermission("srp." + mode.getName().toLowerCase()))
+                if (mode == null || !mode.isMultiplayer())
                     return Collections.emptyList();
 
                 List<String> onlinePlayerNames = Bukkit.getOnlinePlayers().stream()

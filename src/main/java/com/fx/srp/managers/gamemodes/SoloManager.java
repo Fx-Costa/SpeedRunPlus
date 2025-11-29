@@ -16,8 +16,26 @@ import org.bukkit.entity.Player;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Manager responsible for handling all aspects of the Solo game mode (single-player speedruns).
+ *
+ * <p>Responsibilities include:</p>
+ * <ul>
+ *     <li>Handling SRP solo commands: {@link Action#START}, {@link Action#STOP}, {@link Action#RESET}</li>
+ *     <li>Starting, resetting, and stopping {@link SoloSpeedrun} instances</li>
+ *     <li>Managing player state, teleportation, and world creation</li>
+ *     <li>Displaying countdowns, titles, and final time to the player</li>
+ * </ul>
+ */
 public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
 
+    /**
+     * Constructs a new SoloManager.
+     *
+     * @param plugin the main {@link SpeedRunPlus} plugin instance
+     * @param gameManager the {@link GameManager} for run registration and player management
+     * @param worldManager the {@link WorldManager} for creating and deleting worlds
+     */
     public SoloManager(SpeedRunPlus plugin, GameManager gameManager, WorldManager worldManager) {
         super(plugin, gameManager, worldManager);
     }
@@ -25,6 +43,15 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     /* ==========================================================
      *                       COMMANDS
      * ========================================================== */
+    /**
+     * Handles a {@link SRPCommand} for a solo player.
+     *
+     * <p>Delegates to the appropriate method based on the {@link Action}:
+     * START, STOP, RESET.</p>
+     *
+     * @param player the player executing the command
+     * @param command the parsed {@link SRPCommand}
+     */
     @Override
     public void handleCommand(Player player, SRPCommand command) {
         Action action = command.getAction();
@@ -39,6 +66,13 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     /* ==========================================================
      *                       START SOLO RUN
      * ========================================================== */
+    /**
+     * Starts a new {@link SoloSpeedrun} for a player.
+     *
+     * <p>Creates the required worlds, captures the player state, and more.</p>
+     *
+     * @param player the player starting the solo speedrun
+     */
     @Override
     public void start(Player player) {
         // If already in a speedrun
@@ -47,11 +81,11 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
             return;
         }
 
-        StopWatch sw = new StopWatch();
-        Speedrunner runner = new Speedrunner(player, sw);
+        StopWatch stopWatch = new StopWatch();
+        Speedrunner runner = new Speedrunner(player, stopWatch);
         runner.captureState();
 
-        SoloSpeedrun soloSpeedrun = new SoloSpeedrun(gameManager, runner, sw, null);
+        SoloSpeedrun soloSpeedrun = new SoloSpeedrun(gameManager, runner, stopWatch, null);
         gameManager.registerRun(soloSpeedrun);
 
         initializeRun(soloSpeedrun);
@@ -81,6 +115,14 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     /* ==========================================================
      *                       RESET SOLO RUN
      * ========================================================== */
+    /**
+     * Resets the worlds and state of a player in a {@link SoloSpeedrun}.
+     *
+     * <p>Teleports the player, recreates worlds with the previous seed, and more.</p>
+     *
+     * @param soloSpeedrun the solo run to reset
+     * @param player the player requesting the reset
+     */
     public void reset(SoloSpeedrun soloSpeedrun, Player player) {
         // If not already in a run
         if (!gameManager.isInRun(player)) {
@@ -102,6 +144,15 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     /* ==========================================================
      *                       STOP SOLO RUN
      * ========================================================== */
+    /**
+     * Stops a {@link SoloSpeedrun}, optionally announcing the player's time.
+     *
+     * <p>Displays a title with the final run time and calls {@link AbstractGameModeManager#finishRun}
+     * for cleanup.</p>
+     *
+     * @param soloSpeedrun the solo run to stop
+     * @param player the player who completed the run (nullable)
+     */
     @Override
     public void stop(SoloSpeedrun soloSpeedrun, Player player) {
         soloSpeedrun.setState(AbstractSpeedrun.State.FINISHED);
@@ -110,8 +161,8 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
         if (player != null) {
             // Get the final time
             String formattedTime = new TimeFormatter(soloSpeedrun.getStopWatch())
-                    .includeHours()
-                    .superscriptMs()
+                    .withHours()
+                    .withSuperscriptMs()
                     .format();
 
             player.sendTitle(
@@ -130,8 +181,8 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     /* ==========================================================
      *                      HELPERS
      * ========================================================== */
-    protected Optional<SoloSpeedrun> getActiveRun(Player p) {
-        return gameManager.getActiveRun(p).filter(r -> r instanceof SoloSpeedrun)
+    private Optional<SoloSpeedrun> getActiveRun(Player player) {
+        return gameManager.getActiveRun(player).filter(r -> r instanceof SoloSpeedrun)
                 .map(r -> (SoloSpeedrun) r);
     }
 }

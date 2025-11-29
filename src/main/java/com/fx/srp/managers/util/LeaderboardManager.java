@@ -3,8 +3,13 @@ package com.fx.srp.managers.util;
 import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.util.time.TimeFormatter;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -17,6 +22,15 @@ import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+/**
+ * Manages the speedrun leaderboard, including persistent storage and visual podium display.
+ *
+ * <p>This manager tracks completed runs, stores them in a file, sorts them by completion
+ * time, and updates an in-game podium using Armor Stands to display player heads and times.</p>
+ *
+ * <p>The leaderboard stores a maximum of 10 entries and automatically updates the
+ * podium positions in the configured world.</p>
+ */
 public class LeaderboardManager {
 
     private final Logger logger = Bukkit.getLogger();
@@ -27,18 +41,21 @@ public class LeaderboardManager {
     private final List<RunEntry> leaderboard = new ArrayList<>();
     private final List<PodiumEntry> currentPodium = new ArrayList<>();
 
-    public LeaderboardManager(SpeedRunPlus plugin) {
-        this.plugin = plugin;
-        this.dataFile = new File(plugin.getDataFolder(), "leaderboard.yml");
-        loadLeaderboard();
-        updatePodium();
-    }
-
+    /**
+     * Represents a completed run entry for the leaderboard.
+     */
     public static class RunEntry {
         public String playerName;
         public UUID playerUUID;
         public long time; // milliseconds
 
+        /**
+         * Constructs a new {@code RunEntry}.
+         *
+         * @param playerName the name of the player
+         * @param playerUUID the UUID of the player
+         * @param time       the completion time in milliseconds
+         */
         public RunEntry(String playerName, UUID playerUUID, long time) {
             this.playerName = playerName;
             this.playerUUID = playerUUID;
@@ -46,12 +63,46 @@ public class LeaderboardManager {
         }
     }
 
-    private static class PodiumEntry {
-        ArmorStand headStand;
-        ArmorStand timeStand;
+    /**
+     * Represents a podium entry on the leaderboard.
+     * <p>
+     * Each entry contains the armor stands for displaying the player's head and their run time in the world.
+     */
+    private static final class PodiumEntry {
+        private ArmorStand headStand;
+        private ArmorStand nameStand;
+        private ArmorStand timeStand;
     }
 
-    public void loadLeaderboard() {
+    /**
+     * Constructs a LeaderboardManager and loads the existing leaderboard.
+     *
+     * @param plugin the main plugin instance
+     */
+    public LeaderboardManager(SpeedRunPlus plugin) {
+        this.plugin = plugin;
+        this.dataFile = new File(plugin.getDataFolder(), "leaderboard.yml");
+        loadLeaderboard();
+        updatePodium();
+    }
+
+    /**
+     * Records a finished run for a player.
+     *
+     * @param player the player completing the run
+     * @param time   the completion time in milliseconds
+     */
+    public void finishRun(Player player, long time) {
+        leaderboard.add(new RunEntry(player.getName(), player.getUniqueId(), time));
+        sortLeaderboard();
+        saveLeaderboard();
+        updatePodium();
+    }
+
+    /* ==========================================================
+     *                      Helpers
+     * ========================================================== */
+    private void loadLeaderboard() {
         // Cannot load nor create leaderboard directories / file
         if (!createLeaderboardFileIfNotPresent(dataFile)) return;
 
@@ -60,7 +111,8 @@ public class LeaderboardManager {
             leaderboard.clear();
             for (String line : lines) {
                 String[] parts = line.split(",");
-                if (parts.length == 3) {
+                int expectedSize = 3;
+                if (parts.length == expectedSize) {
                     leaderboard.add(new RunEntry(parts[0], UUID.fromString(parts[1]), Long.parseLong(parts[2])));
                 }
             }
@@ -71,7 +123,7 @@ public class LeaderboardManager {
         }
     }
 
-    public void saveLeaderboard() {
+    private void saveLeaderboard() {
         List<String> lines = leaderboard.stream()
                 .map(e -> e.playerName + "," + e.playerUUID + "," + e.time)
                 .collect(Collectors.toList());
@@ -82,95 +134,27 @@ public class LeaderboardManager {
         }
     }
 
-    public void finishRun(Player player, long time) {
-        leaderboard.add(new RunEntry(player.getName(), player.getUniqueId(), time));
-        sortLeaderboard();
-        saveLeaderboard();
-        updatePodium();
-    }
-
-    public void updatePodium() {
-        if (leaderboard.isEmpty()) return;
+    private void updatePodium() {
+        if (leaderboard.isEmpty()) {
+            return;
+        }
 
         Bukkit.getScheduler().runTask(plugin, () -> {
-
-            // Remove old Armor Stands
-            for (PodiumEntry entry : currentPodium) {
-                if (entry.headStand != null && !entry.headStand.isDead()) entry.headStand.remove();
-                if (entry.timeStand != null && !entry.timeStand.isDead()) entry.timeStand.remove();
-            }
-            currentPodium.clear();
-
-            // The positions of the podium in the world
+            clearOldPodium();
+            List<Location> locations = new ArrayList<>(configHandler.getPodiumPositions().values());
             World world = configHandler.getPodiumWorld();
-            List<Location> podiumLocations = new ArrayList<>(configHandler.getPodiumPositions().values());
 
-            for (int i = 0; i < Math.min(leaderboard.size(), podiumLocations.size()); i++) {
-                RunEntry entry = leaderboard.get(i);
-                long milliseconds = entry.time;
-
-                // Locations for placing names, times relative to the heads
-                Location baseLoc = podiumLocations.get(i);
-                Location headLoc = baseLoc.clone().add(0, 0.5, 0);
-                Location nameLoc = headLoc.clone().add(0, 2, 0);    // slightly above the head
-                Location timeLoc = headLoc.clone().add(0, 0.85, 0); // slightly below the head
-
-                // Create player head item
-                ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-                SkullMeta skullMeta = (SkullMeta) head.getItemMeta();
-                OfflinePlayer offline = Bukkit.getOfflinePlayer(entry.playerUUID);
-                if (offline.hasPlayedBefore() || offline.isOnline()) {
-                    skullMeta.setOwningPlayer(offline);
-                } else {
-                    skullMeta.setOwningPlayer(null);
-                }
-                head.setItemMeta(skullMeta);
-
-                // An armor stand for the Player's head
-                ArmorStand headStand = world.spawn(headLoc, ArmorStand.class);
-                headStand.setVisible(false);
-                headStand.setGravity(false);
-                headStand.setMarker(true);
-                headStand.setInvulnerable(true);
-                headStand.setRotation(180f, 0f);
-                EntityEquipment equipment = headStand.getEquipment();
-                if (equipment != null) equipment.setHelmet(head);
-                headStand.addScoreboardTag("spr_podium_head");
-
-                // An armor stand for the Player's name
-                ArmorStand nameStand = world.spawn(nameLoc, ArmorStand.class);
-                nameStand.setVisible(false);
-                nameStand.setInvulnerable(true);
-                nameStand.setCustomName(entry.playerName);
-                nameStand.setCustomNameVisible(true);
-                nameStand.setGravity(false);
-                nameStand.setMarker(true);
-                nameStand.addScoreboardTag("spr_podium_name");
-                nameStand.setRotation(180f, 0f);
-
-                // An armor stand for the Player's time
-                ArmorStand timeStand = world.spawn(timeLoc, ArmorStand.class);
-                timeStand.setVisible(false);
-                timeStand.setInvulnerable(true);
-                timeStand.setCustomName(new TimeFormatter(milliseconds).includeHours().useSuffixes().format());
-                timeStand.setCustomNameVisible(true);
-                timeStand.setGravity(false);
-                timeStand.setMarker(true);
-                timeStand.addScoreboardTag("spr_podium_time");
-
-                // Add to the podium
-                PodiumEntry podiumEntry = new PodiumEntry();
-                podiumEntry.headStand = headStand;
-                podiumEntry.timeStand = timeStand;
-                currentPodium.add(podiumEntry);
+            int count = Math.min(leaderboard.size(), locations.size());
+            for (int i = 0; i < count; i++) {
+                createPodiumEntry(leaderboard.get(i), locations.get(i), world);
             }
         });
     }
 
     private void sortLeaderboard() {
         leaderboard.sort(Comparator.comparingLong(e -> e.time));
-        if (leaderboard.size() > 10) {
-            leaderboard.subList(10, leaderboard.size()).clear();
+        if (leaderboard.size() > configHandler.getLeaderboardMaxEntries()) {
+            leaderboard.subList(configHandler.getLeaderboardMaxEntries(), leaderboard.size()).clear();
         }
     }
 
@@ -192,5 +176,95 @@ public class LeaderboardManager {
             logger.warning("[SRP] IOException while creating file: " + e.getMessage());
             return false;
         }
+    }
+
+    private void clearOldPodium() {
+        for (PodiumEntry entry : currentPodium) {
+            removeIfExists(entry.headStand);
+            removeIfExists(entry.nameStand);
+            removeIfExists(entry.timeStand);
+        }
+        currentPodium.clear();
+    }
+
+    private void removeIfExists(Entity entity) {
+        if (entity != null && !entity.isDead()) {
+            entity.remove();
+        }
+    }
+
+    private void createPodiumEntry(RunEntry run, Location baseLoc, World world) {
+        Location headLoc = baseLoc.clone().add(0, 0.5, 0);
+        Location nameLoc = headLoc.clone().add(0, 2, 0);
+        Location timeLoc = headLoc.clone().add(0, 0.85, 0);
+
+        ItemStack headItem = createHeadItem(run.playerUUID);
+
+        ArmorStand headStand = createHeadStand(world, headLoc, headItem);
+        ArmorStand nameStand = createNameStand(world, nameLoc, run.playerName);
+        ArmorStand timeStand = createTimeStand(world, timeLoc, run.time);
+
+
+        PodiumEntry entry = new PodiumEntry();
+        entry.headStand = headStand;
+        entry.nameStand = nameStand;
+        entry.timeStand = timeStand;
+        currentPodium.add(entry);
+    }
+
+    private ItemStack createHeadItem(UUID uuid) {
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+
+        OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
+        if (player.hasPlayedBefore() || player.isOnline()) {
+            meta.setOwningPlayer(player);
+        } else {
+            meta.setOwningPlayer(null);
+        }
+
+        head.setItemMeta(meta);
+        return head;
+    }
+
+    private ArmorStand createHeadStand(World world, Location loc, ItemStack head) {
+        ArmorStand stand = spawnBaseStand(world, loc);
+        stand.setRotation(180f, 0f);
+
+        EntityEquipment equipment = stand.getEquipment();
+        if (equipment != null) {
+            equipment.setHelmet(head);
+        }
+
+        stand.addScoreboardTag("spr_podium_head");
+        return stand;
+    }
+
+    private ArmorStand createNameStand(World world, Location loc, String name) {
+        ArmorStand stand = spawnBaseStand(world, loc);
+        stand.setCustomName(name);
+        stand.setCustomNameVisible(true);
+        stand.addScoreboardTag("spr_podium_name");
+        stand.setRotation(180f, 0f);
+        return stand;
+    }
+
+    private ArmorStand createTimeStand(World world, Location loc, long milliseconds) {
+        ArmorStand stand = spawnBaseStand(world, loc);
+        stand.setCustomName(
+                new TimeFormatter(milliseconds).withHours().withSuffixes().format()
+        );
+        stand.setCustomNameVisible(true);
+        stand.addScoreboardTag("spr_podium_time");
+        return stand;
+    }
+
+    private ArmorStand spawnBaseStand(World world, Location loc) {
+        ArmorStand armorStand = world.spawn(loc, ArmorStand.class);
+        armorStand.setVisible(false);
+        armorStand.setGravity(false);
+        armorStand.setMarker(true);
+        armorStand.setInvulnerable(true);
+        return armorStand;
     }
 }
