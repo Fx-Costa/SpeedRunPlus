@@ -1,0 +1,114 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.final-version.outputs.final_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Get the previous tag
+      - name: Get previous tag
+        id: prev
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Previous tag: $TAG"
+          echo "previous_tag=$TAG" >> $GITHUB_OUTPUT
+
+      # Get the version
+      - name: Get next version
+        if: ${{ !endsWith(steps.prev.outputs.previous_tag, '-SNAPSHOT') }}
+        id: version
+        uses: thenativeweb/get-next-version@main
+
+      #  Determine based on the presence of a [SNAPSHOT]-footer in commit message, whether it is a pre-release
+      - name: Determine final version
+        id: final-version
+        run: |
+          PREV="${{ steps.prev.outputs.previous_tag }}"
+          NEXT="${{ steps.version.outputs.version }}"  # may be empty if skipped
+          
+          # Read full commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          
+          # Should version end with -SNAPSHOT?
+          if [[ "$COMMIT_MSG" == *"[SNAPSHOT]"* ]]; then
+            SNAPSHOT_SUFFIX="-SNAPSHOT"
+          else
+            SNAPSHOT_SUFFIX=""
+          fi
+          
+          # If previous tag was a snapshot → continue same base version
+          if [[ "$PREV" == *"-SNAPSHOT" ]]; then
+            BASE_VERSION="${PREV%-SNAPSHOT}"   # strip -SNAPSHOT
+            echo "Continuing snapshot version base: $BASE_VERSION"
+            FINAL_VERSION="${BASE_VERSION}${SNAPSHOT_SUFFIX}"
+          else
+            # Otherwise we expect NEXT to be available
+            if [[ -z "$NEXT" ]]; then
+              echo "ERROR: Next version could not be determined!"
+              exit 1
+            fi
+            echo "Using computed next version: $NEXT"
+            FINAL_VERSION="${NEXT}${SNAPSHOT_SUFFIX}"
+          fi
+          
+          echo "Final version: $FINAL_VERSION"
+          echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
+
+      # Dependencies
+      - name: Create libs directory
+        run: mkdir -p libs
+
+      - name: Download Multiverse-Core
+        run: |
+          curl -L -o libs/Multiverse-Core-4.3.16.jar "${{ vars.MULTIVERSE_CORE_DOWNLOAD_URL }}"
+
+      - name: Download Multiverse-NetherPortals
+        run: |
+          curl -L -o libs/Multiverse-NetherPortals-4.2.3.jar "${{ vars.MULTIVERSE_NETHERPORTALS_DOWNLOAD_URL }}"
+
+      # Java & Maven setup
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "11"
+
+      - name: Create config.yml
+        run: |
+          mkdir -p src/main/resources
+          printf '%s\n' "${{ secrets.CONFIG_YML }}" > src/main/resources/config.yml
+
+      - name: Build with Maven
+        run: mvn -B versions:set -DnewVersion=${{ steps.final-version.outputs.final_version }} -DprocessAllModules clean package
+
+      # Upload resulting JAR for downstream workflows
+      - name: Upload built JAR
+        if: github.ref == 'refs/heads/main' # Only upload if on main-branch
+        uses: actions/upload-artifact@v4
+        with:
+          name: srp-jar
+          path: target/*.jar
+
+  # Call the release workflow if on main-branch
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
+      artifact_name: srp-jar
+    secrets: inherit

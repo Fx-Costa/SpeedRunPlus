@@ -1,0 +1,46 @@
+name: Deploy Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to deploy
+        type: choice
+        options:
+          - 1.0.0-SNAPSHOT
+          - 0.0.0
+
+env:
+  ASSET_NAME: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Set the asset name based on version input
+      - name: Set asset name
+        run: |
+          echo "ASSET_NAME=srp-${{ github.event.inputs.version }}.jar" >> $GITHUB_ENV
+
+      # Download release asset from GitHub Releases
+      - name: Download GitHub release asset
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.inputs.version }}
+          fileName: ${{ env.ASSET_NAME }}
+          token: ${{ secrets.CI_CD_PAT }}
+          out-file-path: .
+
+      # Deploy via SFTP
+      - name: Deploy via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          port: ${{ secrets.SFTP_PORT }}
+          local_path: "./${{ env.ASSET_NAME }}"
+          remote_path: '/plugins/'
+          sftp_only: true
+          ssh_private_key: ''
