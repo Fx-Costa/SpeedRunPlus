@@ -290,7 +290,7 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
     }
 
     /* ==========================================================
-     *                       UTILITIES
+     *                       HELPERS
      * ========================================================== */
     private Player getOpponent(BattleSpeedrun battleSpeedrun, Player player) {
         if (battleSpeedrun.getChallenger().getPlayer().equals(player)) return battleSpeedrun.getChallengee().getPlayer();

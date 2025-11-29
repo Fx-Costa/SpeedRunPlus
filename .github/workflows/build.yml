@@ -14,13 +14,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       # Get the version
       - name: Get next version
         id: version
         uses: thenativeweb/get-next-version@main
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       #  Determine based on the presence of a [SNAPSHOT]-footer in commit message, whether it is a pre-release
       - name: Optionally add snapshot suffix
@@ -29,13 +30,16 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MSG"
           if [[ "$COMMIT_MSG" == *"[SNAPSHOT]"* ]]; then
-            echo "SNAPSHOT_SUFFIX=-SNAPSHOT" >> $GITHUB_ENV
+            SNAPSHOT_SUFFIX="-SNAPSHOT"
           else
-            echo "SNAPSHOT_SUFFIX=" >> $GITHUB_ENV
+            SNAPSHOT_SUFFIX=""
           fi
-          FINAL_VERSION="${{ steps.version.outputs.next_version }}${{ env.SNAPSHOT_SUFFIX }}"
+
+          FINAL_VERSION="${NEXT_VERSION}${SNAPSHOT_SUFFIX}"
           echo "Version: $FINAL_VERSION"
           echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
+        env:
+          NEXT_VERSION: ${{ steps.version.outputs.version }}
 
       # Dependencies
       - name: Create libs directory

@@ -128,7 +128,7 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
     }
 
     /* ==========================================================
-     *                      UTILITIES
+     *                      HELPERS
      * ========================================================== */
     protected Optional<SoloSpeedrun> getActiveRun(Player p) {
         return gameManager.getActiveRun(p).filter(r -> r instanceof SoloSpeedrun)

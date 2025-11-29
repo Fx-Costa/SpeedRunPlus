@@ -178,7 +178,7 @@ public class WorldManager {
     }
 
     /* ==========================================================
-     *                       UTILITIES
+     *                       HELPERS
      * ========================================================== */
     private void linkWorlds(String overworldName, String netherName, String endName) {
         portalManager.addWorldLink(overworldName, netherName, PortalType.NETHER);

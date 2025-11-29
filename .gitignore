@@ -37,3 +37,6 @@ scripts/**
 
 # Personal configuration files
 **/config-personal.yml
+
+# Linter
+megalinter-reports/
