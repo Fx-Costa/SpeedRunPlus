@@ -1,0 +1,59 @@
+#####################################
+# Languages / file types to enable  #
+#####################################
+ENABLE:
+  - JAVA
+  - XML
+  - MARKDOWN
+  - YAML
+  - JSON
+  - GIT
+
+DISABLE:
+  - SPELL
+  - COPYPASTE
+
+#####################################
+#        Specific linters           #
+#####################################
+ENABLE_LINTERS:
+  # Java
+  - JAVA_CHECKSTYLE
+  - JAVA_PMD
+
+  # Markdown
+  - MARKDOWN_MARKDOWNLINT
+
+  # YAML
+  - YAML_YAMLLINT
+
+  # JSON
+  - JSON_JSONLINT
+
+  # Repository scanning (security)
+  - REPOSITORY_GITLEAKS
+  - REPOSITORY_SEMGREP
+
+DISABLE_LINTERS:
+  # YAML
+  - YAML_PRETTIER
+
+  # JSON
+  - JSON_PRETTIER
+
+#####################################
+#         Linter config             #
+#####################################
+JAVA_CHECKSTYLE_CONFIG_FILE: .config/linters/checkstyle.xml
+JAVA_PMD_CONFIG_FILE: .config/linters/pmd.xml
+
+#####################################
+#     Directories to exclude        #
+#####################################
+EXCLUDED_DIRECTORIES:
+  - target
+
+#####################################
+#           Reporting               #
+#####################################
+SHOW_SKIPPED_LINTERS: false

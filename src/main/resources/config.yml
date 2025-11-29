@@ -2,8 +2,10 @@
 # SpeedRunPlus (SRP) Configuration
 # ========================================
 
-# Main overworld name (where players are teleported after runs)
-main-world: world
+# Main world names
+main-overworld: world
+main-nether: world_nether
+main-end: world_the_end
 
 # Game rule settings
 game-rules:
@@ -13,6 +15,9 @@ game-rules:
   # Maximum duration of a speedrun in minutes
   max-time-minutes: 120
 
+  # Time before requests for BattleSpeedrun / Coop are invalidated
+  max-request-seconds: 30
+
 # Prefix used for generated speedrun worlds
 world-prefix:
   overworld: srp-overworld-
@@ -21,11 +26,12 @@ world-prefix:
 
 # Timer settings
 timer:
-  # The amount of time to countdown from when starting a speedrun in seconds
+  # The amount of time to countdown from, when starting a speedrun in seconds
   countdown-seconds: 10
 
 # Podium configuration
 podium:
+  max: 10
   world: world
   positions:
     1:

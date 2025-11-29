@@ -37,3 +37,12 @@ scripts/**
 
 # Personal configuration files
 **/config-personal.yml
+
+# Linter
+megalinter-reports/
+
+# Conventional changelogs
+package-lock.json
+package.json
+CHANGELOG.md
+node_modules

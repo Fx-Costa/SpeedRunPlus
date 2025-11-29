@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      artifact_name:
+        required: true
+        type: string
+
+jobs:
+
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: dist/
+
+      # Automatically generate release changelog based on conventional commits
+      - name: Install conventional-changelog
+        run: npm install conventional-changelog@7.1.1 conventional-changelog-conventionalcommits@9.1.0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          node .config/changelog/changelog.mjs ${{ inputs.version }}
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Create a release
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ inputs.version }}
+          name: ${{ inputs.version }}
+          body: ${{ steps.changelog.outputs.content }}
+          draft: false
+          allowUpdates: true
+          replacesArtifacts: true
+          prerelease: ${{ contains(inputs.version, '-SNAPSHOT') }}
+          artifacts: dist/*.jar
+          token: ${{ secrets.CI_CD_PAT }}
+
+  update-deploy-workflow:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Add an option to the deploy-workflow, with the new version
+      - name: Update deploy options
+        run: |
+          FILE=.github/workflows/deploy.yml
+          VERSION="${{ inputs.version }}"
+
+          # Remove the version if it already exists
+          sed -i "/- $VERSION/d" "$FILE"
+
+          # Prepend new version right after the 'options:' line
+          sed -i "/options:/a\          - $VERSION" "$FILE"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.CI_CD_PAT }}@github.com/${{ github.repository }}.git
+          
+          if git diff --quiet .github/workflows/deploy.yml; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git add .github/workflows/deploy.yml
+          git commit -m "Release ${{ inputs.version }} [skip ci]"
+          git push
