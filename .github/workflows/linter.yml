@@ -32,15 +32,16 @@ jobs:
           fetch-depth: 0
 
       - name: Get changed files
-        id: changed-files
+        id: changed
         run: |
-          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ',' | sed 's/,$//')
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: MegaLinter
         uses: oxsecurity/megalinter/flavors/java@v9
         env:
-          MEGALINTER_CONFIG_FILE: .github/linter/.mega-linter.yml
-          MEGALINTER_FILES_TO_LINT: ${{ env.MEGALINTER_FILES_TO_LINT }}
+          MEGALINTER_CONFIG_FILE: .config/linters/.mega-linter.yml
+          MEGALINTER_FILES_TO_LINT: ${{ steps.changed.outputs.files }}
 
       # Upload MegaLinter artifacts
       - name: Linter reports
