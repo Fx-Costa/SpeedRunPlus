@@ -19,8 +19,6 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 // TODO: Fix in-game timer - seconds, minutes, hours never increment
-// TODO: Respawns outside of speedrun worlds
-// TODO: SRP help command
 
 /**
  * SpeedRunPlus-plugin entry point

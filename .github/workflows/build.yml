@@ -38,34 +38,28 @@ jobs:
         run: |
           PREV="${{ steps.prev.outputs.previous_tag }}"
           NEXT="${{ steps.version.outputs.version }}"  # may be empty if skipped
-          
-          # Read full commit message
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "Commit message: $COMMIT_MSG"
-          
-          # Should version end with -SNAPSHOT?
-          if [[ "$COMMIT_MSG" == *"[SNAPSHOT]"* ]]; then
-            SNAPSHOT_SUFFIX="-SNAPSHOT"
-          else
-            SNAPSHOT_SUFFIX=""
-          fi
-          
-          # If previous tag was a snapshot → continue same base version
+          COMMIT_MSG=$(git log -1 --pretty=%B)        # latest commit message
+
           if [[ "$PREV" == *"-SNAPSHOT" ]]; then
-            BASE_VERSION="${PREV%-SNAPSHOT}"   # strip -SNAPSHOT
-            echo "Continuing snapshot version base: $BASE_VERSION"
-            FINAL_VERSION="${BASE_VERSION}${SNAPSHOT_SUFFIX}"
+            echo "Previous tag is snapshot → keeping version: $PREV"
+            FINAL_VERSION="$PREV"
           else
             # Otherwise we expect NEXT to be available
             if [[ -z "$NEXT" ]]; then
               echo "ERROR: Next version could not be determined!"
               exit 1
             fi
-            echo "Using computed next version: $NEXT"
-            FINAL_VERSION="${NEXT}${SNAPSHOT_SUFFIX}"
+
+            # Append -SNAPSHOT if commit message ends with [SNAPSHOT]
+            if [[ "$COMMIT_MSG" == *"[SNAPSHOT]" ]]; then
+              FINAL_VERSION="${NEXT}-SNAPSHOT"
+              echo "Appending -SNAPSHOT to next version → $FINAL_VERSION"
+            else
+              FINAL_VERSION="$NEXT"
+              echo "Using computed next version: $FINAL_VERSION"
+            fi
           fi
-          
-          echo "Final version: $FINAL_VERSION"
+
           echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
 
       # Dependencies
