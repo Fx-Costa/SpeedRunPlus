@@ -18,28 +18,55 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # Get the previous tag
+      - name: Get previous tag
+        id: prev
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Previous tag: $TAG"
+          echo "previous_tag=$TAG" >> $GITHUB_OUTPUT
+
       # Get the version
       - name: Get next version
+        if: ${{ !endsWith(steps.prev.outputs.previous_tag, '-SNAPSHOT') }}
         id: version
         uses: thenativeweb/get-next-version@main
 
       #  Determine based on the presence of a [SNAPSHOT]-footer in commit message, whether it is a pre-release
-      - name: Optionally add snapshot suffix
+      - name: Determine final version
         id: final-version
         run: |
+          PREV="${{ steps.prev.outputs.previous_tag }}"
+          NEXT="${{ steps.version.outputs.version }}"  # may be empty if skipped
+          
+          # Read full commit message
           COMMIT_MSG=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MSG"
+          
+          # Should version end with -SNAPSHOT?
           if [[ "$COMMIT_MSG" == *"[SNAPSHOT]"* ]]; then
             SNAPSHOT_SUFFIX="-SNAPSHOT"
           else
             SNAPSHOT_SUFFIX=""
           fi
-
-          FINAL_VERSION="${NEXT_VERSION}${SNAPSHOT_SUFFIX}"
-          echo "Version: $FINAL_VERSION"
+          
+          # If previous tag was a snapshot → continue same base version
+          if [[ "$PREV" == *"-SNAPSHOT" ]]; then
+            BASE_VERSION="${PREV%-SNAPSHOT}"   # strip -SNAPSHOT
+            echo "Continuing snapshot version base: $BASE_VERSION"
+            FINAL_VERSION="${BASE_VERSION}${SNAPSHOT_SUFFIX}"
+          else
+            # Otherwise we expect NEXT to be available
+            if [[ -z "$NEXT" ]]; then
+              echo "ERROR: Next version could not be determined!"
+              exit 1
+            fi
+            echo "Using computed next version: $NEXT"
+            FINAL_VERSION="${NEXT}${SNAPSHOT_SUFFIX}"
+          fi
+          
+          echo "Final version: $FINAL_VERSION"
           echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
-        env:
-          NEXT_VERSION: ${{ steps.version.outputs.version }}
 
       # Dependencies
       - name: Create libs directory

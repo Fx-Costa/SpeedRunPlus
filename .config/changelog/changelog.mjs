@@ -57,6 +57,11 @@ const commitTransformer = (commit) => {
 const preset = await createPreset({types});
 const originalTransform = preset.writer.transform;
 preset.writer.transform = (commit, context) => {
+    // Skip certain commits
+    if (commit.message && commit.message.includes("[skip ci]")) {
+        return undefined;
+    }
+
     const cleaned = commitTransformer(commit);
     return originalTransform
         ? originalTransform(cleaned, context)
