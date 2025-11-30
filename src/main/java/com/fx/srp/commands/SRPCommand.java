@@ -104,9 +104,8 @@ public class SRPCommand {
          * @throws IllegalStateException if required fields are missing or incompatible
          */
         public SRPCommand build() {
-            if (gameMode == null) throw new IllegalStateException("GameMode is required");
             if (action == null) throw new IllegalStateException("Action is required");
-            if (!gameMode.isValidAction(action))
+            if (gameMode != null && !gameMode.isValidAction(action))
                 throw new IllegalStateException("Action " + action.getName() +
                         " does not belong to game mode " + gameMode.getName());
 
@@ -117,7 +116,8 @@ public class SRPCommand {
     @Override
     public String toString() {
         String targetPlayerName = this.targetPlayer != null ? this.targetPlayer.getName() : "";
-        return "/srp " + gameMode.getName() + " " + action.getName() + targetPlayerName;
+        String gameModeName = this.gameMode != null ? this.gameMode.getName() : "";
+        return "/srp " + gameModeName + " " + action.getName() + targetPlayerName;
     }
 }
 
