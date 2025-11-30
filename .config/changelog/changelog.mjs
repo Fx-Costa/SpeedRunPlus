@@ -43,6 +43,7 @@ const commitTransformer = (commit) => {
 
         // Parse the header
         const match = newCommit.header.match(/^([a-z]+)(\(([^)]+)\))?:\s*(.+)$/);
+        if (!match) return newCommit;
         const [, type, , scope, subject] = match;
         newCommit.type = type;
         newCommit.scope = scope;
