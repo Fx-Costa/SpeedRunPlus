@@ -4,6 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum Action {
+    HELP("help"),
+
     // Solo actions
     START("start"),
     RESET("reset"),
@@ -37,6 +39,19 @@ public enum Action {
                 .filter(a -> a.getName().equalsIgnoreCase(input))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Attempts to match a string to a {@link Action} by its command name.
+     *
+     * @param input the user-provided action name
+     * @return the matching {@code Action}, or {@code null} if none match
+     */
+    public static Action parse(String input) {
+        for (Action action : values()) {
+            if (action.name.equalsIgnoreCase(input)) return action;
+        }
+        return null;
     }
 }
 
