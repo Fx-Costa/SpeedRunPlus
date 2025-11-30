@@ -6,6 +6,7 @@ import com.fx.srp.model.player.Speedrunner;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang.time.StopWatch;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -91,12 +92,33 @@ public abstract class AbstractSpeedrun implements ISpeedrun {
         World respawnWorld = event.getRespawnLocation().getWorld();
         String respawnWorldName = respawnWorld.getName();
 
-        // Overwrite the respawn location, if it is not in a speedrun world
-        if (!respawnWorldName.equals(worlds.getOverworld().getName())
-                && !respawnWorldName.equals(worlds.getNether().getName())
-                && !respawnWorldName.equals(worlds.getEnd().getName())) {
-            // Always respawn in the speedrun overworld
-            event.setRespawnLocation(worlds.getOverworld().getSpawnLocation());
+        // Speedrun world names
+        String speedRunOverworldName = worlds.getOverworld().getName();
+        String speedRunNetherName = worlds.getNether().getName();
+        String speedRunEndName = worlds.getEnd().getName();
+
+        // Let the event pass if it is in a speedrun world
+        if (respawnWorldName.equals(speedRunOverworldName) ||
+                respawnWorldName.equals(speedRunNetherName) ||
+                respawnWorldName.equals(speedRunEndName)
+        ) return;
+
+        // Otherwise, overwrite the respawn location
+        Player player = speedrunner.getPlayer();
+        Location bedSpawnLocation = player.getBedSpawnLocation();   // includes respawn-anchors
+        boolean isBedSpawnLocationInSpeedrun = bedSpawnLocation != null && (
+                bedSpawnLocation.getWorld().getName().equals(speedRunOverworldName) ||
+                bedSpawnLocation.getWorld().getName().equals(speedRunNetherName) ||
+                bedSpawnLocation.getWorld().getName().equals(speedRunEndName)
+        );
+
+        // Overwrite the spawn location at the bed/respawn-anchor if set
+        if (isBedSpawnLocationInSpeedrun) {
+            event.setRespawnLocation(bedSpawnLocation);
+            return;
         }
+
+        // Otherwise, respawn in the speedrun overworld spawn
+        event.setRespawnLocation(worlds.getSpawn());
     }
 }

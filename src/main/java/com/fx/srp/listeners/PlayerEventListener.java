@@ -3,6 +3,7 @@ package com.fx.srp.listeners;
 import com.fx.srp.managers.GameManager;
 import lombok.AllArgsConstructor;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -46,7 +47,7 @@ public class PlayerEventListener implements Listener {
      *
      * @param event the respawn event triggered for a player
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onRespawn(PlayerRespawnEvent event) {
         gameManager.handlePlayerRespawn(event);
     }
