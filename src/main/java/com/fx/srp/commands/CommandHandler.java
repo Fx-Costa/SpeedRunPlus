@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Handles execution and tab-completion of all SRP-related commands.
@@ -96,6 +97,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             player.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
             return false;
         }
+        if (gameMode == null) return true;
 
         // Gamemode-specific permission
         String gameModeName = gameMode.getName().toLowerCase();
@@ -118,11 +120,37 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
     private void executeCommand(Player player, SRPCommand command) {
         GameMode gameMode = command.getGameMode();
+        Action action = command.getAction();
+
+        if (action == Action.HELP) {
+            sendHelpMessage(player);
+            return;
+        }
+
         switch (gameMode) {
             case SOLO: gameManager.getSoloManager().handleCommand(player, command); break;
             case BATTLE: gameManager.getBattleManager().handleCommand(player, command); break;
             default: player.sendMessage(ChatColor.RED + "Unknown game mode."); break;
         }
+    }
+
+    private void sendHelpMessage(Player player) {
+        ChatColor green = ChatColor.GREEN;
+        ChatColor yellow = ChatColor.YELLOW;
+        ChatColor white = ChatColor.WHITE;
+
+        player.sendMessage(green + "===== SpeedRunPlus Help =====");
+        player.sendMessage(yellow + "/srp solo start" + white + " - Start a solo run");
+        player.sendMessage(yellow + "/srp solo reset" + white + " - Reset your solo run");
+        player.sendMessage(yellow + "/srp solo stop" + white + " - Stop your solo run");
+
+        player.sendMessage(yellow + "/srp battle request <player>" + white + " - Challenge a player to a battle");
+        player.sendMessage(yellow + "/srp battle accept" + white + " - Accept a request to battle");
+        player.sendMessage(yellow + "/srp battle decline" + white + " - Decline a request to battle");
+        player.sendMessage(yellow + "/srp battle surrender" + white + " - Surrender the battle run");
+
+        player.sendMessage(yellow + "/srp help" + white + " - Show this help message");
+        player.sendMessage(green + "===========================");
     }
 
     /**
@@ -154,13 +182,19 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
             // At: /srp <TAB>
             case 1: {
+                // Allowed commands
+                List<String> allowedCommands = List.of(Action.HELP.getName());
+
                 // Filtering by game modes the player has permission
                 List<String> allowedGamemodes = Arrays.stream(GameMode.values())
                         .map(GameMode::getName)
                         .filter(mode -> player.hasPermission(srp + "." + mode.toLowerCase()))
                         .collect(Collectors.toList());
 
-                return filterByInput.apply(allowedGamemodes, args[0]);
+                return filterByInput.apply(
+                        Stream.concat(allowedGamemodes.stream(), allowedCommands.stream()).collect(Collectors.toList()),
+                        args[0]
+                );
             }
 
             // At: /srp <gamemode> <TAB>

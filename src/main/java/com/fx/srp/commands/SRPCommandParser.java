@@ -16,7 +16,8 @@ import java.util.Optional;
 @NoArgsConstructor
 public class SRPCommandParser {
 
-    private static final int MINIMUM_ARGS = 2;
+    private static final int MINIMUM_ARGS = 1;
+    private static final int MINIMUM_GAME_ARGS = 2;
 
     /**
      * Attempts to parse a raw command label and argument array into an
@@ -29,25 +30,41 @@ public class SRPCommandParser {
      *         or {@code Optional.empty()} if parsing fails at any stage
      */
     public Optional<SRPCommand> parse(String commandString, String... args) {
-        if (!commandString.equalsIgnoreCase(SRPCommand.getSrp())) return Optional.empty();
-        if (args.length < MINIMUM_ARGS) return Optional.empty();
+        if (!commandString.equalsIgnoreCase(SRPCommand.getSrp()) || args.length < MINIMUM_ARGS) return Optional.empty();
 
-        com.fx.srp.commands.GameMode mode = com.fx.srp.commands.GameMode.parse(args[0]);
+        // Likely a game command with a player argument
+        if (args.length > MINIMUM_GAME_ARGS) return parseGameCommand(args[0], args[1], args[2]);
+
+        // Likely a game command with no player argument
+        if (args.length == MINIMUM_GAME_ARGS) return parseGameCommand(args[0], args[1], null);
+
+        // Likely a utility command
+        return parseUtilityCommand(args[0]);
+    }
+
+    private Optional<SRPCommand> parseGameCommand(String gameModeArg, String actionArg, String playerArg) {
+        GameMode mode = GameMode.parse(gameModeArg);
         if (mode == null) return Optional.empty();
 
-        com.fx.srp.commands.Action action = com.fx.srp.commands.Action.parse(args[1], mode);
+        Action action = Action.parse(actionArg, mode);
         if (action == null) return Optional.empty();
 
-        Player targetPlayer = null;
-        if (args.length > MINIMUM_ARGS && mode == GameMode.BATTLE) {
-            targetPlayer = Bukkit.getPlayer(args[2]);
-        }
+        Player targetPlayer = mode.isMultiplayer() ? Bukkit.getPlayer(playerArg) : null;
 
         return Optional.of(
                 SRPCommand.builder()
                         .withGameMode(mode)
                         .withAction(action)
                         .withTargetPlayer(targetPlayer)
+                        .build()
+        );
+    }
+
+    private Optional<SRPCommand> parseUtilityCommand(String command) {
+        Action action = Action.parse(command);
+        return Optional.of(
+                SRPCommand.builder()
+                        .withAction(action)
                         .build()
         );
     }

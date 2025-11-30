@@ -83,8 +83,8 @@ public enum GameMode {
      * @return the matching {@code GameMode}, or {@code null} if none match
      */
     public static GameMode parse(String input) {
-        for (GameMode gm : values()) {
-            if (gm.name.equalsIgnoreCase(input)) return gm;
+        for (GameMode gameMode : values()) {
+            if (gameMode.name.equalsIgnoreCase(input)) return gameMode;
         }
         return null;
     }
