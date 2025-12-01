@@ -30,7 +30,7 @@ public class TimeFormatter {
      */
     public TimeFormatter(@NonNull StopWatch stopWatch) {
         this.stopWatch = stopWatch;
-        this.milliseconds = stopWatch.getTime();
+        this.milliseconds = -1;
     }
 
     /**
@@ -122,7 +122,7 @@ public class TimeFormatter {
 
     private long getValue(Function<Long, Long> extractor) {
         long base = (stopWatch != null)
-                ? TimeUtil.getMilliseconds(stopWatch)
+                ? stopWatch.getTime()
                 : milliseconds;
         return extractor.apply(base);
     }

@@ -56,22 +56,22 @@ jobs:
   update-deploy-workflow:
     needs: create-release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workflow-file: [ ".github/workflows/deploy.yml", ".github/workflows/promote-snapshot.yml" ]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      # Add an option to the deploy-workflow, with the new version
-      - name: Update deploy options
+      # Add an option to the workflow with the new version
+      - name: Update workflow options
         run: |
-          FILE=.github/workflows/deploy.yml
+          FILE=${{ matrix.workflow-file }}
           VERSION="${{ inputs.version }}"
-
-          # Remove the version if it already exists
+          
           sed -i "/- $VERSION/d" "$FILE"
-
-          # Prepend new version right after the 'options:' line
           sed -i "/options:/a\          - $VERSION" "$FILE"
 
       - name: Commit and push changes
@@ -80,11 +80,11 @@ jobs:
           git config user.email "github-actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.CI_CD_PAT }}@github.com/${{ github.repository }}.git
           
-          if git diff --quiet .github/workflows/deploy.yml; then
+          if git diff --quiet ${{ matrix.workflow-file }}; then
             echo "No changes to commit"
             exit 0
           fi
           
-          git add .github/workflows/deploy.yml
+          git add ${{ matrix.workflow-file }}
           git commit -m "Release ${{ inputs.version }} [skip ci]"
           git push

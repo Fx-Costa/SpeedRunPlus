@@ -52,6 +52,8 @@ JAVA_PMD_CONFIG_FILE: .config/linters/pmd.xml
 #####################################
 EXCLUDED_DIRECTORIES:
   - target
+  - .config
+  - .github
 
 #####################################
 #           Reporting               #

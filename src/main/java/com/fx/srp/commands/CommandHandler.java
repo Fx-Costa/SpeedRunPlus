@@ -70,89 +70,6 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean canUseCommand(Player player, SRPCommand command) {
-        // OPs bypass everything
-        String srp = SRPCommand.getSrp();
-        if (player.hasPermission(srp + ".admin")) return true;
-
-        GameMode gameMode = command.getGameMode();
-        Action action = command.getAction();
-
-        // Cannot use commands while frozen
-        Optional<Speedrunner> runnerOpt = gameManager.getSpeedrunner(player);
-        if (runnerOpt.isPresent() && runnerOpt.get().isFrozen()) {
-            player.sendMessage(ChatColor.RED + "You cannot use commands during the countdown!");
-            return false;
-        }
-
-        // Restrictions during an active run
-        if (gameManager.isInRun(player) && !gameMode.isAllowedDuringRun(action)) {
-            player.sendMessage(ChatColor.RED + "You cannot use this command during a run!");
-            return false;
-        }
-
-        // Enforce permissions
-        // Overall usage
-        if (!player.hasPermission(srp + ".use")) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
-            return false;
-        }
-        if (gameMode == null) return true;
-
-        // Gamemode-specific permission
-        String gameModeName = gameMode.getName().toLowerCase();
-        if (!player.hasPermission(srp + "." + gameModeName)) {
-            player.sendMessage(
-                    ChatColor.RED + "You do not have permission to use the " + gameModeName + " gamemode!"
-            );
-            return false;
-        }
-
-        // Action-specific permission
-        String actionName = action.getName().toLowerCase();
-        if (!player.hasPermission(srp + "." + gameModeName + "." + actionName)) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to use " + actionName + "!");
-            return false;
-        }
-
-        return true;
-    }
-
-    private void executeCommand(Player player, SRPCommand command) {
-        GameMode gameMode = command.getGameMode();
-        Action action = command.getAction();
-
-        if (action == Action.HELP) {
-            sendHelpMessage(player);
-            return;
-        }
-
-        switch (gameMode) {
-            case SOLO: gameManager.getSoloManager().handleCommand(player, command); break;
-            case BATTLE: gameManager.getBattleManager().handleCommand(player, command); break;
-            default: player.sendMessage(ChatColor.RED + "Unknown game mode."); break;
-        }
-    }
-
-    private void sendHelpMessage(Player player) {
-        ChatColor green = ChatColor.GREEN;
-        ChatColor yellow = ChatColor.YELLOW;
-        ChatColor white = ChatColor.WHITE;
-
-        player.sendMessage(green + "===== SpeedRunPlus Help =====");
-        player.sendMessage(yellow + "/srp solo start" + white + " - Start a solo run");
-        player.sendMessage(yellow + "/srp solo reset" + white + " - Reset your solo run");
-        player.sendMessage(yellow + "/srp solo stop" + white + " - Stop your solo run");
-
-        player.sendMessage(yellow + "/srp battle request <player>" + white + " - Challenge a player to a battle");
-        player.sendMessage(yellow + "/srp battle accept" + white + " - Accept a request to battle");
-        player.sendMessage(yellow + "/srp battle decline" + white + " - Decline a request to battle");
-        player.sendMessage(yellow + "/srp battle surrender" + white + " - Surrender the battle run");
-
-        player.sendMessage(yellow + "/srp help" + white + " - Show this help message");
-        player.sendMessage(green + "===========================");
-    }
-
     /**
      * Provides dynamic in-game tab-completion for SRP commands.
      *
@@ -231,5 +148,119 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
             default: return Collections.emptyList();
         }
+    }
+
+    /* ==========================================================
+     *                       HELPERS
+     * ========================================================== */
+    private boolean canUseCommand(Player player, SRPCommand command) {
+        String srp = SRPCommand.getSrp();
+
+        // Admins bypass everything
+        if (isAdmin(player, srp)) return true;
+
+        // Must have base permission
+        if (!hasBasePermission(player, srp)) {
+            return deny(player, "You do not have permission to use this command!");
+        }
+
+        // Frozen players cannot use commands
+        if (isFrozen(player)) {
+            return deny(player, "You cannot use commands during the countdown!");
+        }
+
+        GameMode gameMode = command.getGameMode();
+        Action action = command.getAction();
+
+        // Restrictions during a run (only applicable if gamemode is present)
+        if (isInRunAndNotAllowed(player, gameMode, action)) {
+            return deny(player, "You cannot use this command during a run!");
+        }
+
+        // If the command has no gamemode, nothing else to check
+        if (gameMode == null) return true;
+
+        String gameModeName = gameMode.getName().toLowerCase(Locale.ROOT);
+
+        // Gamemode permission
+        if (!hasGameModePermission(player, srp, gameModeName)) {
+            return deny(player, "You do not have permission to use the " + gameModeName + " gamemode!");
+        }
+
+        // Action permission
+        String actionName = action.getName().toLowerCase(Locale.ROOT);
+        return hasActionPermission(player, srp, gameModeName, actionName) ||
+                deny(player, "You do not have permission to use " + actionName + "!");
+    }
+
+    private boolean isAdmin(Player player, String srp) {
+        return player.hasPermission(srp + ".admin");
+    }
+
+    private boolean hasBasePermission(Player player, String srp) {
+        return player.hasPermission(srp + ".use");
+    }
+
+    private boolean isFrozen(Player player) {
+        Optional<Speedrunner> optRunner = gameManager.getSpeedrunner(player);
+        return optRunner.isPresent() && optRunner.get().isFrozen();
+    }
+
+    /**
+     * Returns true when a player is in a run and the provided action is not allowed
+     * during that run according to the game mode.
+     */
+    private boolean isInRunAndNotAllowed(Player player, GameMode gameMode, Action action) {
+        return gameManager.isInRun(player)
+                && gameMode != null
+                && !gameMode.isAllowedDuringRun(action);
+    }
+
+    private boolean hasGameModePermission(Player player, String srp, String gameModeName) {
+        return player.hasPermission(srp + "." + gameModeName);
+    }
+
+    private boolean hasActionPermission(Player player, String srp, String gameModeName, String actionName) {
+        return player.hasPermission(srp + "." + gameModeName + "." + actionName);
+    }
+
+    private boolean deny(Player player, String message) {
+        player.sendMessage(ChatColor.RED + message);
+        return false;
+    }
+
+    private void executeCommand(Player player, SRPCommand command) {
+        GameMode gameMode = command.getGameMode();
+        Action action = command.getAction();
+
+        if (action == Action.HELP) {
+            sendHelpMessage(player);
+            return;
+        }
+
+        switch (gameMode) {
+            case SOLO: gameManager.getSoloManager().handleCommand(player, command); break;
+            case BATTLE: gameManager.getBattleManager().handleCommand(player, command); break;
+            default: player.sendMessage(ChatColor.RED + "Unknown game mode."); break;
+        }
+    }
+
+    private void sendHelpMessage(Player player) {
+        ChatColor green = ChatColor.GREEN;
+        ChatColor yellow = ChatColor.YELLOW;
+        ChatColor white = ChatColor.WHITE;
+
+        player.sendMessage(green + "===== SpeedRunPlus Help =====");
+        player.sendMessage(yellow + "/srp solo start" + white + " - Start a solo run");
+        player.sendMessage(yellow + "/srp solo reset" + white + " - Reset your solo run");
+        player.sendMessage(yellow + "/srp solo stop" + white + " - Stop your solo run");
+
+        player.sendMessage(yellow + "/srp battle request <player>" + white + " - Challenge a player to a battle");
+        player.sendMessage(yellow + "/srp battle accept" + white + " - Accept a request to battle");
+        player.sendMessage(yellow + "/srp battle decline" + white + " - Decline a request to battle");
+        player.sendMessage(yellow + "/srp battle surrender" + white + " - Surrender the battle run");
+
+        player.sendMessage(yellow + "/srp help" + white + " - Show this help message");
+        player.sendMessage(green + "===========================");
     }
 }
