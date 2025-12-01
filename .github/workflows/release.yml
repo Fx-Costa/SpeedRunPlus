@@ -53,7 +53,7 @@ jobs:
           artifacts: dist/*.jar
           token: ${{ secrets.CI_CD_PAT }}
 
-  update-deploy-workflow:
+  update-options:
     needs: create-release
     runs-on: ubuntu-latest
     strategy:
