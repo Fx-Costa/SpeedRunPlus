@@ -1,0 +1,44 @@
+name: Promote Snapshot Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The SNAPSHOT to promote
+        type: choice
+        options:
+          - 1.0.0-SNAPSHOT
+
+jobs:
+  promote_release:
+    runs-on: ubuntu-latest
+    steps:
+
+      # Determine the new version tag
+      - name: Set up final version
+        id: version
+        run: |
+          SNAPSHOT="${{ github.event.inputs.version }}"
+          FINAL="${SNAPSHOT/-SNAPSHOT/}"
+          echo "FINAL_VERSION=$FINAL" >> $GITHUB_ENV
+          echo "Promoting $SNAPSHOT → $FINAL"
+
+      # Download assets from the SNAPSHOT release
+      - name: Download SNAPSHOT release assets
+        uses: actions/download-release-asset@v2
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.inputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          asset_name: '*'   # download all assets
+          path: ./assets
+
+      # Create the new release
+      - name: Create promoted release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ env.FINAL_VERSION }}
+          tag_name: ${{ env.FINAL_VERSION }}
+          files: ./assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

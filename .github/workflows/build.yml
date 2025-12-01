@@ -26,38 +26,25 @@ jobs:
           echo "Previous tag: $TAG"
           echo "previous_tag=$TAG" >> $GITHUB_OUTPUT
 
-      # Get the version
+      # Get the next version (if not SNAPSHOT)
       - name: Get next version
         if: ${{ !endsWith(steps.prev.outputs.previous_tag, '-SNAPSHOT') }}
         id: version
         uses: thenativeweb/get-next-version@main
 
-      #  Determine based on the presence of a [SNAPSHOT]-footer in commit message, whether it is a pre-release
+      # Determine final version
       - name: Determine final version
         id: final-version
         run: |
           PREV="${{ steps.prev.outputs.previous_tag }}"
-          NEXT="${{ steps.version.outputs.version }}"  # may be empty if skipped
-          COMMIT_MSG=$(git log -1 --pretty=%B)        # latest commit message
+          NEXT="${{ steps.version.outputs.version }}"
 
           if [[ "$PREV" == *"-SNAPSHOT" ]]; then
-            echo "Previous tag is snapshot → keeping version: $PREV"
             FINAL_VERSION="$PREV"
+            echo "Previous tag is SNAPSHOT → keeping version: $FINAL_VERSION"
           else
-            # Otherwise we expect NEXT to be available
-            if [[ -z "$NEXT" ]]; then
-              echo "ERROR: Next version could not be determined!"
-              exit 1
-            fi
-
-            # Append -SNAPSHOT if commit message ends with [SNAPSHOT]
-            if [[ "$COMMIT_MSG" == *"[SNAPSHOT]" ]]; then
-              FINAL_VERSION="${NEXT}-SNAPSHOT"
-              echo "Appending -SNAPSHOT to next version → $FINAL_VERSION"
-            else
-              FINAL_VERSION="$NEXT"
-              echo "Using computed next version: $FINAL_VERSION"
-            fi
+            FINAL_VERSION="${NEXT}-SNAPSHOT"
+            echo "Previous tag is release → incremented to: $FINAL_VERSION"
           fi
 
           echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
