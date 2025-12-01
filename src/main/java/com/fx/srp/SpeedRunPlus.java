@@ -18,8 +18,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-// TODO: Fix in-game timer - seconds, minutes, hours never increment
-
 /**
  * SpeedRunPlus-plugin entry point
  */
