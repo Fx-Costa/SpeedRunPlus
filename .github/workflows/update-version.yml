@@ -1,0 +1,67 @@
+name: Update Workflow Options
+on:
+  workflow_call:
+    inputs:
+      workflow-file:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+    secrets:
+      TOKEN:
+        required: true
+
+jobs:
+  update-options:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Version
+        run: |
+          echo "VERSION='${{ inputs.version }}'"
+          echo "FILE='${{ inputs.workflow-file }}'"
+
+      # Add an option to the workflow with the new version
+      - name: Add new version to workflow options
+        run: |
+          FILE="${{ inputs.workflow-file }}"
+          VERSION="${{ inputs.version }}"
+
+          awk -v ver="$VERSION" '
+            BEGIN { inserted=0 }
+            /^on:/                  { in_on=1; in_wd=0; in_inputs=0; in_version=0 }
+            in_on && /workflow_dispatch:/ { in_wd=1 }
+            in_wd && /inputs:/      { in_inputs=1 }
+            in_inputs && /version:/ { in_version=1 }
+            in_version && /options:/ {
+            if (!inserted) {
+            print          # print "options:"
+            print "          - " ver   # prepend version
+            inserted=1
+            next
+          }
+          }
+            { print }
+            ' "$FILE" > tmp.yml && mv tmp.yml "$FILE"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git
+
+          if git diff --quiet "${{ inputs.workflow-file }}"; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git fetch origin main
+          git merge --ff-only origin/main
+          git add "${{ inputs.workflow-file }}"
+          git commit -m "Release ${{ inputs.version }} [skip ci]"
+          git push

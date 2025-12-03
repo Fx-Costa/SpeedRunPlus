@@ -15,7 +15,7 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.set-version.outputs.version }}
+      version: ${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,52 +54,22 @@ jobs:
           artifacts: dist/*.jar
           token: ${{ secrets.CI_CD_PAT }}
 
-  update-options:
+  # Add the version as an option in Deploy
+  update-deploy-options:
     needs: create-release
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        workflow-file: [ ".github/workflows/deploy.yml", ".github/workflows/promote-snapshot.yml" ]
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+    uses: ./.github/workflows/update-version.yml
+    with:
+      workflow-file: .github/workflows/deploy.yml
+      version: ${{ needs.create-release.outputs.version }}
+    secrets:
+      TOKEN: ${{ secrets.CI_CD_PAT }}
 
-      # Add an option to the workflow with the new version
-      - name: Add new version to workflow options
-        run: |
-          FILE="${{ matrix.workflow-file }}"
-          VERSION="${{ needs.create-release.outputs.version }}"
-          
-          # Check if version already exists
-          if grep -q "  - $VERSION" "$FILE"; then
-            echo "Version $VERSION already exists in $FILE. Skipping."
-            exit 0
-          fi
-          
-          # Insert version under 'options:' safely
-          awk -v ver="$VERSION" '
-            /^(\s*)options:/ {
-              print
-              indent = substr($0, 1, match($0,/options:/)-1) "  "
-              print indent "- " ver
-              next
-            }
-            { print }
-          ' "$FILE" > tmp.yml && mv tmp.yml "$FILE"
-
-      - name: Commit and push changes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.CI_CD_PAT }}@github.com/${{ github.repository }}.git
-          
-          if git diff --quiet "${{ matrix.workflow-file }}"; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          
-          git add "${{ matrix.workflow-file }}"
-          git commit -m "Release ${{ needs.create-release.outputs.version }} [skip ci]"
-          git push
+  # Add the version as an option in Snapshot Promote
+  update-promote-options:
+    needs: [create-release, update-deploy-options]
+    uses: ./.github/workflows/update-version.yml
+    with:
+      workflow-file: .github/workflows/promote-snapshot.yml
+      version: ${{ needs.create-release.outputs.version }}
+    secrets:
+      TOKEN: ${{ secrets.CI_CD_PAT }}

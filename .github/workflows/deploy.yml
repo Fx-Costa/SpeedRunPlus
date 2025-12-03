@@ -8,6 +8,11 @@ on:
         type: choice
         options:
           - 0.0.0
+      publish:
+        description: Publish to Modrinth
+        type: boolean
+        default: false
+
 env:
   ASSET_NAME: ''
 
@@ -21,14 +26,15 @@ jobs:
           echo "ASSET_NAME=srp-${{ github.event.inputs.version }}.jar" >> $GITHUB_ENV
 
       # Download release asset from GitHub Releases
-      - name: Download GitHub release asset
-        uses: robinraju/release-downloader@v1
+      - name: Fetch GitHub release info
+        id: release_info
+        uses: KevinRohn/github-full-release-data@v2.0.7
         with:
-          repository: ${{ github.repository }}
-          tag: ${{ github.event.inputs.version }}
-          fileName: ${{ env.ASSET_NAME }}
           token: ${{ secrets.CI_CD_PAT }}
-          out-file-path: .
+          version: ${{ github.event.inputs.version }}
+          body-markdown-file-path: ./CHANGELOG.md
+          asset-file: ${{ env.ASSET_NAME }}
+          asset-output: .
 
       # Deploy via SFTP
       - name: Deploy via SFTP
@@ -42,3 +48,19 @@ jobs:
           remote_path: '/plugins/'
           sftp_only: true
           ssh_private_key: ''
+
+      - name: Publish to Modrinth
+        if: ${{ github.event.inputs.publish == 'true' }}
+        uses: RubixDev/modrinth-upload@v1
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          file_path: "./${{ env.ASSET_NAME }}"
+          name: "SpeedRun+ | ${{ github.event.inputs.version }}"
+          version: ${{ github.event.inputs.version }}
+          changelog: ${{ fromJSON(steps.release_info.outputs.body) }}
+          relations: 3wmN97b8:required,vtawPsTo:required
+          game_versions: 1.16.1
+          release_type: ${{ contains(github.event.inputs.version, '-SNAPSHOT') && 'beta' || 'release' }}
+          loaders: paper,bukkit,spigot
+          featured: true
+          project_id: alRlV7Gp
