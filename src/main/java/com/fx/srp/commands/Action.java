@@ -5,13 +5,9 @@ import lombok.Getter;
 @Getter
 public enum Action {
     HELP("help"),
-
-    // Solo actions
     START("start"),
     RESET("reset"),
     STOP("stop"),
-
-    // Battle actions
     REQUEST("request"),
     ACCEPT("accept"),
     DECLINE("decline"),

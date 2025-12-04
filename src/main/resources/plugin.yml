@@ -34,6 +34,11 @@ permissions:
     description: Allows usage of the battle game mode
     default: true
 
+  srp.coop:
+    description: Allows usage of the coop game mode
+    default: true
+
+  # Solo
   srp.solo.start:
     description: Allows starting a run
     default: true
@@ -46,6 +51,24 @@ permissions:
     description: Allows stopping a run
     default: true
 
+  # Coop
+  srp.coop.request:
+    description: Allows requesting another player for a run
+    default: true
+
+  srp.coop.accept:
+    description: Allows accepting a request for a run
+    default: true
+
+  srp.coop.decline:
+    description: Allows declining a request for a run
+    default: true
+
+  srp.coop.stop:
+    description: Allows stopping a run
+    default: true
+
+  # Battle
   srp.battle.request:
     description: Allows requesting another player for a run
     default: true

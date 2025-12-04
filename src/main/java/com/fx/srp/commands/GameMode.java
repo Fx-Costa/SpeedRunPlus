@@ -18,6 +18,17 @@ public enum GameMode {
             false
     ),
 
+    // Multiplayer coop speedrun
+    COOP("coop",
+            // All actions (subcommands) for the coop game mode
+            EnumSet.of(Action.REQUEST, Action.ACCEPT, Action.DECLINE, Action.STOP),
+
+            // All commands allowed during a coop speedrun
+            EnumSet.of(Action.STOP),
+
+            true
+    ),
+
     // Multiplayer (1v1) speedrun
     BATTLE("battle",
             // All actions (subcommands) for the battle game mode

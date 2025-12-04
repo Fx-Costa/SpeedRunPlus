@@ -2,12 +2,14 @@ package com.fx.srp.managers;
 
 import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.managers.gamemodes.BattleManager;
+import com.fx.srp.managers.gamemodes.CoopManager;
 import com.fx.srp.managers.gamemodes.SoloManager;
 import com.fx.srp.managers.util.AfkManager;
 import com.fx.srp.managers.util.LeaderboardManager;
 import com.fx.srp.managers.util.WorldManager;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.BattleSpeedrun;
+import com.fx.srp.model.run.CoopSpeedrun;
 import com.fx.srp.model.run.ISpeedrun;
 import com.fx.srp.model.run.SoloSpeedrun;
 import lombok.Getter;
@@ -41,6 +43,8 @@ public class GameManager {
     // Game modes
     @Getter private final SoloManager soloManager;
     @Getter private final BattleManager battleManager;
+    @Getter private final CoopManager coopManager;
+
 
     // Utilities
     private final AfkManager afkManager;
@@ -60,6 +64,7 @@ public class GameManager {
 
         this.soloManager = new SoloManager(plugin, this, worldManager);
         this.battleManager = new BattleManager(plugin, this, worldManager);
+        this.coopManager = new CoopManager(plugin, this, worldManager);
     }
 
     /* ==========================================================
@@ -131,6 +136,7 @@ public class GameManager {
     public void finishRun(ISpeedrun run, Player player) {
         if (run instanceof SoloSpeedrun) soloManager.stop((SoloSpeedrun) run, player);
         if (run instanceof BattleSpeedrun) battleManager.stop((BattleSpeedrun) run, player);
+        if (run instanceof CoopSpeedrun) coopManager.stop((CoopSpeedrun) run, player);
 
         // Persist changes to the leaderboard
         if (player != null) leaderboardManager.finishRun(player, run.getStopWatch().getTime());

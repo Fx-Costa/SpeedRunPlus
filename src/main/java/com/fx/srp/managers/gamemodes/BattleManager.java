@@ -101,11 +101,11 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
             return;
         }
 
-        // Challengee is already in battle
+        // Challengee is already in speedrun
         if (gameManager.isInRun(challengee)) {
             challenger.sendMessage(
                     ChatColor.GRAY + challengee.getName() + " " +
-                    ChatColor.YELLOW + " is already in a speedrun battle!"
+                    ChatColor.YELLOW + " is already in a speedrun!"
             );
             return;
         }
@@ -172,7 +172,7 @@ public class BattleManager extends AbstractGameModeManager<BattleSpeedrun> {
         PendingRequest request = pendingRequests.remove(challengee.getUniqueId());
         if (request == null || request.getTimeoutTaskId() <= 0) return;
         Player challenger = Bukkit.getPlayer(request.getPlayerUUID());
-        if (challenger == null || !challenger.isOnline()) return;
+        if (challenger == null || !challenger.isOnline() || gameManager.isInRun(challenger)) return;
 
         // Cancel request timeout
         Bukkit.getScheduler().cancelTask(request.getTimeoutTaskId());

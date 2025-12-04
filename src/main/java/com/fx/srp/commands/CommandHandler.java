@@ -241,6 +241,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         switch (gameMode) {
             case SOLO: gameManager.getSoloManager().handleCommand(player, command); break;
             case BATTLE: gameManager.getBattleManager().handleCommand(player, command); break;
+            case COOP: gameManager.getCoopManager().handleCommand(player, command); break;
             default: player.sendMessage(ChatColor.RED + "Unknown game mode."); break;
         }
     }
