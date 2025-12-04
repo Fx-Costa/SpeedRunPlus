@@ -49,7 +49,12 @@ public class SRPCommandParser {
         Action action = Action.parse(actionArg, mode);
         if (action == null) return Optional.empty();
 
-        Player targetPlayer = mode.isMultiplayer() ? Bukkit.getPlayer(playerArg) : null;
+        Player targetPlayer =  null;
+        if (action.isRequiredWithPlayerArg()) {
+            if (playerArg == null) return Optional.empty();
+            targetPlayer = Bukkit.getPlayer(playerArg);
+            if (targetPlayer == null) return Optional.empty();
+        }
 
         return Optional.of(
                 SRPCommand.builder()

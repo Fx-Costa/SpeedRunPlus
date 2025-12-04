@@ -4,24 +4,26 @@ import lombok.Getter;
 
 @Getter
 public enum Action {
-    HELP("help"),
-    START("start"),
-    RESET("reset"),
-    STOP("stop"),
-    REQUEST("request"),
-    ACCEPT("accept"),
-    DECLINE("decline"),
-    SURRENDER("surrender");
+    HELP("help", false),
+    START("start", false),
+    RESET("reset", false),
+    STOP("stop", false),
+    REQUEST("request", true),
+    ACCEPT("accept", false),
+    DECLINE("decline", false),
+    SURRENDER("surrender", false);
 
     private final String name;
+    private final boolean requiredWithPlayerArg;
 
     /**
      * Creates an action for SRPCommands.
      *
      * @param name           the name of the game mode
      */
-    Action(String name) {
+    Action(String name, boolean requiredWithPlayerArg) {
         this.name = name;
+        this.requiredWithPlayerArg = requiredWithPlayerArg;
     }
 
     /**
