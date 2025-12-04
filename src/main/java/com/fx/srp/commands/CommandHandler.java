@@ -252,14 +252,19 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         ChatColor white = ChatColor.WHITE;
 
         player.sendMessage(green + "===== SpeedRunPlus Help =====");
-        player.sendMessage(yellow + "/srp solo start" + white + " - Start a solo run");
-        player.sendMessage(yellow + "/srp solo reset" + white + " - Reset your solo run");
-        player.sendMessage(yellow + "/srp solo stop" + white + " - Stop your solo run");
+        player.sendMessage(yellow + "/srp solo start" + white + " - Start a solo speedrun");
+        player.sendMessage(yellow + "/srp solo reset" + white + " - Reset your solo speedrun");
+        player.sendMessage(yellow + "/srp solo stop" + white + " - Stop your solo speedrun");
 
         player.sendMessage(yellow + "/srp battle request <player>" + white + " - Challenge a player to a battle");
         player.sendMessage(yellow + "/srp battle accept" + white + " - Accept a request to battle");
         player.sendMessage(yellow + "/srp battle decline" + white + " - Decline a request to battle");
-        player.sendMessage(yellow + "/srp battle surrender" + white + " - Surrender the battle run");
+        player.sendMessage(yellow + "/srp battle surrender" + white + " - Surrender the battle speedrun");
+
+        player.sendMessage(yellow + "/srp coop request <player>" + white + " - Request a player to a coop speedrun");
+        player.sendMessage(yellow + "/srp coop accept" + white + " - Accept a request to a coop speedrun");
+        player.sendMessage(yellow + "/srp coop decline" + white + " - Decline a request to coop speedrun");
+        player.sendMessage(yellow + "/srp coop stop" + white + " - Stop the coop speedrun");
 
         player.sendMessage(yellow + "/srp help" + white + " - Show this help message");
         player.sendMessage(green + "===========================");
