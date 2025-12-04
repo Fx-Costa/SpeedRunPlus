@@ -28,6 +28,11 @@ jobs:
           name: ${{ inputs.artifact_name }}
           path: dist/
 
+      - name: Rename JAR using version
+        run: |
+          ORIGINAL_JAR=$(ls dist/srp-*.jar)
+          mv "$ORIGINAL_JAR" "dist/srp-${{ inputs.version }}.jar"
+
       # Automatically generate release changelog based on conventional commits
       - name: Install conventional-changelog
         run: npm install conventional-changelog@7.1.1 conventional-changelog-conventionalcommits@9.1.0
