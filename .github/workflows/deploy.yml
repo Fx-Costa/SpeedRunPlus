@@ -13,8 +13,12 @@ on:
           - 1.0.0-SNAPSHOT
           - 1.0.0-SNAPSHOT
           - 0.0.0
-      publish:
+      publish-modrinth:
         description: Publish to Modrinth
+        type: boolean
+        default: false
+      publish-hangar:
+        description: Publish to Hangar
         type: boolean
         default: false
 
@@ -55,7 +59,7 @@ jobs:
           ssh_private_key: ''
 
       - name: Publish to Modrinth
-        if: ${{ github.event.inputs.publish == 'true' }}
+        if: ${{ github.event.inputs.publish-modrinth == 'true' }}
         uses: RubixDev/modrinth-upload@v1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
@@ -69,3 +73,14 @@ jobs:
           loaders: paper,bukkit,spigot
           featured: true
           project_id: alRlV7Gp
+
+      - name: Publish to Hangar
+        if: ${{ github.event.inputs.deploy_hangar == 'true' }}
+        uses: HangarMC/upload-tool@v1
+        with:
+          api_key: ${{ secrets.HANGAR_TOKEN }}
+          namespace: "Fx-Costa/SpeedRunPlus"
+          file: "./${{ env.ASSET_NAME }}"
+          version: "${{ github.event.inputs.version }}"
+          changelog: ${{ fromJSON(steps.release_info.outputs.body) }}
+          channel: ${{ contains(github.event.inputs.version, '-SNAPSHOT') && 'Development' || 'Release' }}

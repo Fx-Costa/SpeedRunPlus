@@ -233,7 +233,9 @@ public class CoopManager extends AbstractGameModeManager<CoopSpeedrun> {
      * @param player the player requesting the reset
      */
     @Override
-    public void reset(CoopSpeedrun coopSpeedrun, Player player) {}
+    public void reset(CoopSpeedrun coopSpeedrun, Player player) {
+        // Does nothing
+    }
 
     /* ==========================================================
      *                       DECLINE COOP

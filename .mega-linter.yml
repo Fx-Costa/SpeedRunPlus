@@ -56,6 +56,11 @@ EXCLUDED_DIRECTORIES:
   - .github
 
 #####################################
+#     Files (REGEX) to exclude      #
+#####################################
+FILTER_REGEX_EXCLUDE: ./LICENSE.md
+
+#####################################
 #           Reporting               #
 #####################################
 SHOW_SKIPPED_LINTERS: false

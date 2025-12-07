@@ -84,7 +84,7 @@ jobs:
       - name: Create config.yml
         run: |
           mkdir -p src/main/resources
-          printf '%s\n' "${{ secrets.CONFIG_YML }}" > src/main/resources/config.yml
+          printf '%s\n' "${{ variables.SRP_CONFIG_YML }}" > src/main/resources/config.yml
 
       - name: Build with Maven
         run: mvn -B versions:set -DnewVersion=${{ steps.final-version.outputs.final_version }} -DprocessAllModules clean package

@@ -19,7 +19,8 @@ public enum Action {
     /**
      * Creates an action for SRPCommands.
      *
-     * @param name           the name of the game mode
+     * @param name                  the name of the game mode
+     * @param requiredWithPlayerArg whether the action requires a player-name argument
      */
     Action(String name, boolean requiredWithPlayerArg) {
         this.name = name;
