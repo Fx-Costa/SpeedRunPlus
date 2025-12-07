@@ -18,13 +18,15 @@ commands:
       - "[player]"
 
 permissions:
+  # Admin commands
   srp.admin:
-    description: Bypass any restrictions
+    description: Bypass any restrictions & access to admin tools
     default: false
 
+  # General
   srp.use:
     description: Allows overall usage of /srp
-    default: true   # all players have it by default
+    default: true
 
   srp.solo:
     description: Allows usage of the solo game mode

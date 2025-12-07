@@ -1,13 +1,16 @@
 package com.fx.srp.config;
 
 import com.fx.srp.SpeedRunPlus;
+import com.fx.srp.model.seed.SeedCategory;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -58,6 +61,8 @@ public final class ConfigHandler {
     @Getter private int maxPlayers;
     @Getter private long maxRunTime;
     @Getter private long maxRequestTime;
+    @Getter @Setter private boolean filteredSeeds;
+    private Map<SeedCategory.SeedType, Integer> seedWeights;
 
     private ConfigHandler(SpeedRunPlus plugin) {
         this.plugin = plugin;
@@ -66,6 +71,15 @@ public final class ConfigHandler {
 
     public static ConfigHandler getInstance() {
         return INSTANCE;
+    }
+
+    /**
+     * Get a configured weight for a given type of seed.
+     *
+     * @param seedType     The type of seed to get the weight for.
+     */
+    public int getSeedWeight(SeedCategory.SeedType seedType) {
+        return seedWeights.get(seedType);
     }
 
     private void loadConfiguration() {
@@ -134,6 +148,17 @@ public final class ConfigHandler {
         maxPlayers = config.getInt("game-rules.max-players", 4);
         maxRunTime = config.getLong("game-rules.max-run-time-minutes", 30) * 60 * 1000;
         maxRequestTime = config.getLong("game-rules.max-request-seconds", 30) * 1000;
+        filteredSeeds = config.getBoolean("game-rules.filtered-seeds.use-filtered-seeds", false);
+
+        // Seed weights
+        seedWeights = new ConcurrentHashMap<>();
+        ConfigurationSection weightSection = config.getConfigurationSection("game-rules.filtered-seeds.weights");
+        if (filteredSeeds && weightSection != null) {
+            Arrays.stream(SeedCategory.SeedType.values()).forEach(seedType -> seedWeights.put(
+                    seedType,
+                    weightSection.getInt(seedType.name(), 0)
+            ));
+        }
     }
 }
 

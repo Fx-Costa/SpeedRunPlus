@@ -9,6 +9,21 @@ main-end: world_the_end
 
 # Game rule settings
 game-rules:
+
+  # Speedrun world seeds
+  filtered-seeds:
+    # Whether to use filtered seeds or rely on random seeds
+    use-filtered-seeds: false
+
+    # Weights for each type of seed (higher number = more likely to appear)
+    weights:
+      MAPLESS: 1
+      VILLAGE: 1
+      TEMPLE: 1
+      SHIPWRECK: 1
+      RUINED_PORTAL: 1
+      RANDOM: 1
+
   # Maximum number of players allowed to speedrun simultaneously
   max-players: 4
 

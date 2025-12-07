@@ -44,6 +44,7 @@ public class WorldManager {
 
     private final MVWorldManager mvWorldManager;
     private final MultiverseNetherPortals portalManager;
+    private final SeedManager seedManager;
 
     /**
      * Represents a player's set of worlds: Overworld, Nether, End.
@@ -81,6 +82,9 @@ public class WorldManager {
         this.portalManager = plugin.getPortalManager();
         this.plugin = plugin;
 
+        // Seed manager
+        this.seedManager = new SeedManager(plugin);
+
         // Cleanup leftover worlds
         cleanupLeftoverSrpWorlds();
     }
@@ -95,6 +99,9 @@ public class WorldManager {
      * @param seed     Optional world seed.
      * @param callback Callback executed when all worlds are ready. Receives a map
      *                 linking each player's UUID to their WorldSet.
+     * <p><br>If the given seed is null and the config 'use-filtered-seeds' is set, a weighted pseudo-random filtered
+     * seed (for speedrun purposes) will be selected.
+     * If 'use-filtered-seeds' is not set, seed generation is left to be handled by Minecraft.</p>
      */
     public void createWorldsForPlayers(
             Collection<Player> players,
@@ -120,7 +127,10 @@ public class WorldManager {
         }
     }
 
-    private WorldSet createWorldSet(Player player, Long seed) {
+    private WorldSet createWorldSet(Player player, Long inputSeed) {
+        // Determine the seed
+        Long seed = inputSeed;
+        if (inputSeed == null) seed = seedManager.selectSeed();
         String seedString = seed != null ? String.valueOf(seed) : null;
 
         // Determine world names
