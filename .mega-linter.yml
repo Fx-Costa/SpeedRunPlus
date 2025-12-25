@@ -46,6 +46,7 @@ DISABLE_LINTERS:
 #####################################
 JAVA_CHECKSTYLE_CONFIG_FILE: .config/linters/checkstyle.xml
 JAVA_PMD_CONFIG_FILE: .config/linters/pmd.xml
+MARKDOWN_MARKDOWNLINT_CONFIG_FILE: .config/linters/markdownlint.json
 
 #####################################
 #     Directories to exclude        #
@@ -54,6 +55,7 @@ EXCLUDED_DIRECTORIES:
   - target
   - .config
   - .github
+  - third-party
 
 #####################################
 #     Files (REGEX) to exclude      #

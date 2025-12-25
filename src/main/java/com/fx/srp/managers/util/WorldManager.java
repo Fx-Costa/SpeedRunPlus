@@ -77,13 +77,13 @@ public class WorldManager {
      *
      * @param plugin The main plugin instance.
      */
-    public WorldManager(SpeedRunPlus plugin) {
+    public WorldManager(SpeedRunPlus plugin, SeedManager seedManager) {
         this.mvWorldManager = plugin.getMvWorldManager();
         this.portalManager = plugin.getPortalManager();
         this.plugin = plugin;
 
         // Seed manager
-        this.seedManager = new SeedManager(plugin);
+        this.seedManager = seedManager;
 
         // Cleanup leftover worlds
         cleanupLeftoverSrpWorlds();
@@ -95,26 +95,31 @@ public class WorldManager {
     /**
      * Creates world sets for multiple players.
      *
-     * @param players  The players who need worlds.
-     * @param seed     Optional world seed.
-     * @param callback Callback executed when all worlds are ready. Receives a map
-     *                 linking each player's UUID to their WorldSet.
+     * @param players   The players who need worlds.
+     * @param inputSeed Optional world seed.
+     * @param callback  Callback executed when all worlds are ready. Receives a map
+     *                  linking each player's UUID to their WorldSet.
      * <p><br>If the given seed is null and the config 'use-filtered-seeds' is set, a weighted pseudo-random filtered
      * seed (for speedrun purposes) will be selected.
      * If 'use-filtered-seeds' is not set, seed generation is left to be handled by Minecraft.</p>
      */
     public void createWorldsForPlayers(
             Collection<Player> players,
-            Long seed,
+            Long inputSeed,
             Consumer<Map<UUID, WorldSet>> callback
     ) {
         Map<UUID, WorldSet> sets = new ConcurrentHashMap<>();
         AtomicInteger done = new AtomicInteger(0);
         int total = players.size();
 
+        // Determine the seed
+        Long seed = inputSeed;
+        if (inputSeed == null) seed = seedManager.selectSeed();
+        String seedString = seed != null ? String.valueOf(seed) : null;
+
         for (Player player : players) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                WorldSet set = createWorldSet(player, seed);
+                WorldSet set = createWorldSet(player, seedString);
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     sets.put(player.getUniqueId(), set);
@@ -127,34 +132,29 @@ public class WorldManager {
         }
     }
 
-    private WorldSet createWorldSet(Player player, Long inputSeed) {
-        // Determine the seed
-        Long seed = inputSeed;
-        if (inputSeed == null) seed = seedManager.selectSeed();
-        String seedString = seed != null ? String.valueOf(seed) : null;
-
+    private WorldSet createWorldSet(Player player, String seed) {
         // Determine world names
         UUID uuid = player.getUniqueId();
         String overworldName = getWorldName(configHandler.getOverworldPrefix() + uuid);
         String netherName = getWorldName(configHandler.getNetherPrefix() + uuid);
         String endName = getWorldName(configHandler.getEndPrefix() + uuid);
 
+        // Overworld
         mvWorldManager.addWorld(
                 overworldName,
                 World.Environment.NORMAL,
-                seedString,
+                seed,
                 WorldType.NORMAL,
                 true,
                 null
         );
         MultiverseWorld overworld = mvWorldManager.getMVWorld(overworldName);
 
-        seedString = String.valueOf(overworld.getSeed());
-
+        // Nether
         mvWorldManager.addWorld(
                 netherName,
                 World.Environment.NETHER,
-                seedString,
+                seed,
                 WorldType.NORMAL,
                 true,
                 null
@@ -162,10 +162,11 @@ public class WorldManager {
         MultiverseWorld nether = mvWorldManager.getMVWorld(netherName);
         nether.setRespawnToWorld(overworldName);
 
+        // End
         mvWorldManager.addWorld(
                 endName,
                 World.Environment.THE_END,
-                seedString,
+                seed,
                 WorldType.NORMAL,
                 true,
                 null
@@ -173,6 +174,7 @@ public class WorldManager {
         MultiverseWorld end = mvWorldManager.getMVWorld(endName);
         end.setRespawnToWorld(overworldName);
 
+        // Link the three world
         linkWorlds(overworldName, netherName, endName);
 
         return new WorldSet(overworld, nether, end);
