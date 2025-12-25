@@ -15,6 +15,9 @@ game-rules:
     # Whether to use filtered seeds or rely on random seeds
     use-filtered-seeds: false
 
+    # Filtered seeds API
+    filtered-seeds-api: https://filteredseed.com/getRandomUsedSeed/
+
     # Weights for each type of seed (higher number = more likely to appear)
     weights:
       MAPLESS: 1

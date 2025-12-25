@@ -7,10 +7,10 @@
 [![Release](https://img.shields.io/github/v/release/Fx-Costa/SpeedRunPlus)](https://github.com/Fx-Costa/SpeedRunPlus/releases/latest)
 
 # SpeedRun+
+
 **SpeedRun+** (_SpeedRunPlus_) is a plugin for Minecraft (1.16.1) multiplayer servers which provides several speedrun-related
 game modes to your server. **SpeedRun+** manages isolated, temporary worlds when speedrunning and supplies a range
-of quality of life utilities such as: In-game timers, AFK detection, leaderboards, filtered seeds, and more. Game 
-modes include:
+of quality of life utilities such as: In-game timers, AFK detection, leaderboards, filtered seeds, and more. Game modes include:
 
 - **Solo** - A classic single-player speedrun where you aim to defeat the Ender Dragon in the shortest time possible.
 - **Battles** - A head-to-head race between two players in identical worlds. Each player rushes to defeat the Ender Dragon first — the first to do so wins the match.
@@ -49,24 +49,23 @@ or simply on a _1.16.1_-native server!
     - [Hangar - **SpeedRun+**](https://hangar.papermc.io/Fx-Costa/SpeedRunPlus)
     - [Spigot - **SpeedRun+**](https://www.spigotmc.org/resources/speedrun.130642/)
 
-
 2. Add the _JAR_ file to your server's `plugin`-folder
 
-
-3. Restart / Reload the server and start speedrunning by executing the provided [commands](#-commands)!
+3. Restart / Reload the server and start speedrunning by executing the provided commands!
 
 ### ⚙️ Prerequisites
 
-**SpeedRun+** relies on [Multiverse-Core](https://github.com/Multiverse/Multiverse-Core) and 
-[Multiverse-NetherPortals](https://github.com/Multiverse/Multiverse-NetherPortals)
+**SpeedRun+** relies on [Multiverse-Core](https://github.com/Multiverse/Multiverse-Core) and [Multiverse-NetherPortals](https://github.com/Multiverse/Multiverse-NetherPortals)
 to create isolated speedrun worlds. These plugins must be present on the server, for this plugin to work:
 
 - [GitHub - Multiverse-Core v. 4.3.16](https://github.com/Multiverse/Multiverse-Core/releases/tag/4.3.16) / [Modrinth - Multiverse-Core v. 4.3.16](https://modrinth.com/plugin/multiverse-core/version/4.3.16)
 - [GitHub - Multiverse-NetherPortals v. 4.2.3](https://github.com/Multiverse/Multiverse-NetherPortals/releases/tag/4.2.3) / [Modrinth - Multiverse-Core v. 4.3.16](https://modrinth.com/plugin/multiverse-netherportals/version/4.2.3)
 
 ## 🏃️ Commands
+
 **SpeedRun+** uses the following in-game command structure:
-```
+
+```terminaloutput
 /srp <gamemode> <action> [player]
 ```
 
@@ -75,6 +74,7 @@ For additional info and help, see the subsections below or use the `/srp help` c
 ### 🕹️ Player commands
 
 #### 👤 **Solo**
+
 | Command           | Description                             |
 |:------------------|:----------------------------------------|
 | `/srp solo start` | Start a new solo speedrun               |
@@ -82,6 +82,7 @@ For additional info and help, see the subsections below or use the `/srp help` c
 | `/srp solo stop`  | Stop the current speedrun               |
 
 #### 👥 **Battle**
+
 | Command                        | Description                                                            |
 |:-------------------------------|:-----------------------------------------------------------------------|
 | `/srp battle request [player]` | Challenge a player to a battle (1v1) speedrun                          |
@@ -91,6 +92,7 @@ For additional info and help, see the subsections below or use the `/srp help` c
 | `/srp battle surrender`        | Surrender and stop the battle speedrun - awarding the opponent the win |
 
 #### 🫂 **Co-op**
+
 | Command                      | Description                                            |
 |:-----------------------------|:-------------------------------------------------------|
 | `/srp coop request [player]` | Request a player to join you in a cooperative speedrun |
@@ -98,17 +100,19 @@ For additional info and help, see the subsections below or use the `/srp help` c
 | `/srp coop decline`          | Decline a request to a cooperative speedrun            |
 | `/srp coop surrender`        | Stop the current cooperative speedrun - no winners     |
 
-
 ### 🛡️ Admin commands
+
 Administrative commands exist for managing runs, troubleshooting issues, and performing maintenance actions.
 The player must have the administrative permission `srp.admin` (disabled by default) to allow use of these.
 
 For the full list of admin commands, use:
-```
+
+```terminaloutput
 /srp admin help
 ```
 
 ## ️🛠️ Configuration & Permissions
+
 **SpeedRun+** is highly configurable, allowing server owners to fine-tune game rules, world generation, timer behavior,
 AFK handling, podiums to display top leaderboard contestants, and more. All settings can be adjusted through the
 plugin’s `config.yml`, giving you control over how speedruns operate on your server.
@@ -117,7 +121,7 @@ Below is a complete example configuration file to help you understand the availa
 You can use this as a reference when customizing your own setup.
 
 <details> <summary><strong>Config Example <i>(Click to expand)</i></strong></summary>
-    
+
 ```yaml
 # ========================================
 # SpeedRunPlus (SRP) Configuration
@@ -195,6 +199,7 @@ afk:
 </details>
 
 ### 🔑 Permissions
+
 **SpeedRun+** includes a set of permissions, that integrate seamlessly into [LuckPerms](https://luckperms.net/), and let
 server owners control which features and gamemodes players can access. Most servers will likely grant _solo_, _battle_,
 or _co-op_ permissions based on player ranks, while administrative permissions should be reserved for staff.
@@ -210,6 +215,7 @@ Below is a brief overview of permissions, but be sure to see the `plugin.yml` fo
 | `srp.admin`  | Allows the player to use all administrator commands | _False_ |
 
 ## 🤝 Support & Contact
+
 If you encounter issues, have suggestions, or want to request new features, please use the official issue tracker on:
 
 [GitHub Issues](https://github.com/Fx-Costa/SpeedRunPlus/issues)
@@ -218,9 +224,9 @@ For anything else—questions, feedback, or general discussion—feel free to op
 
 ## 📜 Licensing and Contributions
 
-This project is licensed under the [AGPL-3.0 License](LICENSE.md), allowing open use, modification, and redistribution under
+This project is licensed under the [AGPL-3.0 License](https://raw.githubusercontent.com/Fx-Costa/SpeedRunPlus/main/LICENSE.md), allowing open use, modification, and redistribution under
 the terms of the license.
 
 Contributions are welcome! However, all contributions must follow the rules
-outlined in [CONTRIBUTING](CONTRIBUTING.md) and are subject to the [Contributor License Agreement](CLA.md).
+outlined in [CONTRIBUTING](https://raw.githubusercontent.com/Fx-Costa/SpeedRunPlus/main/CONTRIBUTING.md) and are subject to the [Contributor License Agreement](https://raw.githubusercontent.com/Fx-Costa/SpeedRunPlus/main/CLA.md).
 Only contributions approved by the project owner will be merged into the official version.

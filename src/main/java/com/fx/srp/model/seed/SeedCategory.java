@@ -27,11 +27,17 @@ public class SeedCategory {
      */
     @Getter
     public enum SeedType {
-        MAPLESS,
-        VILLAGE,
-        TEMPLE,
-        SHIPWRECK,
-        RUINED_PORTAL,
-        RANDOM
+        MAPLESS("zsg"),
+        VILLAGE("zsgvillage"),
+        TEMPLE("zsgtemple"),
+        SHIPWRECK("zsgshipwreck"),
+        RUINED_PORTAL("rpseedbank"),
+        RANDOM(null);
+
+        private final String fsgName;
+
+        SeedType(String fsgName) {
+            this.fsgName = fsgName;
+        }
     }
 }

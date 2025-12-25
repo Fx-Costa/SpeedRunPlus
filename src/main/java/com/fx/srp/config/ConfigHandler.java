@@ -10,6 +10,8 @@ import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +65,7 @@ public final class ConfigHandler {
     @Getter private long maxRequestTime;
     @Getter @Setter private boolean filteredSeeds;
     private Map<SeedCategory.SeedType, Integer> seedWeights;
+    @Getter private URL filteredSeedsApi;
 
     private ConfigHandler(SpeedRunPlus plugin) {
         this.plugin = plugin;
@@ -158,6 +161,16 @@ public final class ConfigHandler {
                     seedType,
                     weightSection.getInt(seedType.name(), 0)
             ));
+        }
+
+        // FSGs Practice seeds API
+        String fsgApi = config.getString("game-rules.filtered-seeds.filtered-seeds-api");
+        if (fsgApi != null) {
+            try {
+                filteredSeedsApi = new URL(fsgApi);
+            } catch (MalformedURLException e) {
+                logger.warning("[SRP] Invalid Filtered Seeds API URL");
+            }
         }
     }
 }
