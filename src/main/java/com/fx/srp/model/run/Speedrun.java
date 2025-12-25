@@ -1,8 +1,8 @@
 package com.fx.srp.model.run;
 
-import com.fx.srp.managers.GameManager;
 import com.fx.srp.managers.util.WorldManager;
 import com.fx.srp.model.player.Speedrunner;
+import com.fx.srp.commands.GameMode;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang.time.StopWatch;
@@ -22,9 +22,9 @@ import java.util.List;
  * and player respawn handling.
  * </p>
  */
-public abstract class AbstractSpeedrun implements ISpeedrun {
+public abstract class Speedrun implements ISpeedrun {
 
-    protected final GameManager gameManager;
+    @Getter protected final GameMode gameMode;
 
     @Getter private final StopWatch stopWatch;
 
@@ -41,13 +41,13 @@ public abstract class AbstractSpeedrun implements ISpeedrun {
     /**
      * Constructs a new speedrun instance.
      *
-     * @param gameManager The {@code GameManager} managing this run.
+     * @param gameMode the {@code GameMode} that the run represents
      * @param owner       The {@code Speedrunner} who owns or participates in this run.
      * @param stopWatch   The {@code StopWatch} instance to track elapsed time.
      * @param seed        Optional seed for world generation. May be {@code null}.
      */
-    public AbstractSpeedrun(GameManager gameManager, Speedrunner owner, StopWatch stopWatch, Long seed) {
-        this.gameManager = gameManager;
+    public Speedrun(GameMode gameMode, Speedrunner owner, StopWatch stopWatch, Long seed) {
+        this.gameMode = gameMode;
         this.owner = owner;
         this.stopWatch = stopWatch;
         this.seed = seed;
@@ -72,7 +72,7 @@ public abstract class AbstractSpeedrun implements ISpeedrun {
      * @param player The {@code Player} who left the server.
      */
     public void onPlayerLeave(Player player) {
-        gameManager.finishRun(this, null);
+        gameMode.getManager().abort(this, null,null);
     }
 
     /**

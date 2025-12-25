@@ -1,8 +1,8 @@
 package com.fx.srp.model.run;
 
-import com.fx.srp.managers.GameManager;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.util.ui.TimerUtil;
+import com.fx.srp.commands.GameMode;
 import lombok.Getter;
 import org.apache.commons.lang.time.StopWatch;
 import org.bukkit.entity.Player;
@@ -12,10 +12,10 @@ import java.util.List;
 /**
  * Represents a coop speedrun with two players: a party leader and a partner.
  * <p>
- * Extends {@link AbstractSpeedrun} and provides logic for managing a two-player competitive run.
+ * Extends {@link Speedrun} and provides logic for managing a two-player competitive run.
  * </p>
  */
-public class CoopSpeedrun extends AbstractSpeedrun {
+public class CoopSpeedrun extends Speedrun {
 
     @Getter
     private final Speedrunner leader;
@@ -26,19 +26,19 @@ public class CoopSpeedrun extends AbstractSpeedrun {
     /**
      * Constructs a new {@code CoopSpeedrun}.
      *
-     * @param gameManager The {@code GameManager} managing this run.
+     * @param gameMode the {@code GameMode} that the run represents
      * @param leader      The {@code Speedrunner} who initiated the coop speedrun.
      * @param partner     The {@code Speedrunner} who was invited.
      * @param stopWatch   The {@code StopWatch} instance to track elapsed time.
      * @param seed        Optional seed for world generation. May be {@code null}.
      */
-    public CoopSpeedrun(GameManager gameManager,
+    public CoopSpeedrun(GameMode gameMode,
                         Speedrunner leader,
                         Speedrunner partner,
                         StopWatch stopWatch,
                         Long seed
     ) {
-        super(gameManager, leader, stopWatch, seed);
+        super(gameMode, leader, stopWatch, seed);
         this.leader = leader;
         this.partner = partner;
     }
@@ -75,6 +75,6 @@ public class CoopSpeedrun extends AbstractSpeedrun {
     @Override
     public void onPlayerLeave(Player leaver) {
         // No winners
-        gameManager.finishRun(this, null);
+        gameMode.getManager().abort(this, null, "Your partner has left the game!");
     }
 }

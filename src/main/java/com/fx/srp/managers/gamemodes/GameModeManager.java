@@ -5,11 +5,13 @@ import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.managers.util.WorldManager;
 import com.fx.srp.model.player.Speedrunner;
-import com.fx.srp.model.run.AbstractSpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.util.ui.TimerUtil;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -32,10 +34,10 @@ import java.util.UUID;
  * </ul>
  * </p>
  *
- * @param <T> the specific type of {@link AbstractSpeedrun} this manager handles
+ * @param <T> the specific type of {@link Speedrun} this manager handles
  */
 @AllArgsConstructor
-public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implements IGameModeManager<T> {
+public abstract class GameModeManager<T extends Speedrun> implements IGameModeManager {
 
     protected final ConfigHandler configHandler = ConfigHandler.getInstance();
     protected final SpeedRunPlus plugin;
@@ -43,16 +45,30 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     protected final GameManager gameManager;
     protected final WorldManager worldManager;
 
+    @Override
+    public void abort(@NonNull Speedrun run, CommandSender sender, String reason) {
+        // Notify each participant
+        run.getSpeedrunners().forEach((speedrunner) -> {
+            String message = ChatColor.RED + "Your run has been aborted" +
+                    (sender instanceof Player ? " by: " + ChatColor.WHITE + sender.getName() : "") +
+                    (reason != null ? ChatColor.RED + ", reason: " + ChatColor.WHITE + reason : "!");
+
+            speedrunner.getPlayer().sendMessage(message);
+        });
+
+        finishRun(run, 0);
+    }
+
     /* ==========================================================
      *                COMMON INITIALIZATION
      * ========================================================== */
     /**
-     * Initializes a new run and setting the state to {@link AbstractSpeedrun.State#CREATING_WORLDS}.
+     * Initializes a new run and setting the state to {@link Speedrun.State#CREATING_WORLDS}.
      *
      * @param run the run to initialize
      */
     protected void initializeRun(T run) {
-        run.setState(AbstractSpeedrun.State.CREATING_WORLDS);
+        run.setState(Speedrun.State.CREATING_WORLDS);
     }
 
     /* ==========================================================
@@ -74,7 +90,7 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
 
     private void start(T run, Collection<Speedrunner> players) {
         // Create the timer and update the game state
-        run.setState(AbstractSpeedrun.State.COUNTDOWN);
+        run.setState(Speedrun.State.COUNTDOWN);
         run.initializeTimers();
 
         new BukkitRunnable() {
@@ -120,12 +136,12 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
                 );
 
                 // Update speedrun state
-                run.setState(AbstractSpeedrun.State.RUNNING);
+                run.setState(Speedrun.State.RUNNING);
 
                 // Schedule timeout
                 scheduleTimeoutTask(
                         run,
-                        () -> stop(run, null)
+                        () -> abort(run, null, "Times up!")
                 );
 
                 cancel();
@@ -202,8 +218,8 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
      *
      * @param run the run to finish
      */
-    protected void finishRun(T run, int delayTicks) {
-        run.setState(AbstractSpeedrun.State.FINISHED);
+    protected void finishRun(Speedrun run, int delayTicks) {
+        run.setState(Speedrun.State.FINISHED);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             // Perform cleanup
@@ -217,13 +233,13 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
         }, delayTicks);
     }
 
-    private void cleanupAfterRun(T run, Runnable onWorldsDeleted) {
+    private void cleanupAfterRun(Speedrun run, Runnable onWorldsDeleted) {
         // stop stopwatch + cancel update tasks
         run.getStopWatch().stop();
         cancelTasks(run);
 
         // Update speedrun state
-        run.setState(AbstractSpeedrun.State.CLEANING);
+        run.setState(Speedrun.State.CLEANING);
 
         // Freeze all speedrunners
         List<Speedrunner> speedRunners = run.getSpeedrunners();
@@ -253,7 +269,7 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
     protected void scheduleTimeoutTask(T run, Runnable timeoutHandler) {
         long ticks = configHandler.getMaxRunTime() / 50L;
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (run.getState() == AbstractSpeedrun.State.RUNNING) {
+            if (run.getState() == Speedrun.State.RUNNING) {
                 timeoutHandler.run();
             }
         }, ticks);
@@ -271,7 +287,7 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
      */
     protected void scheduleRepeatingTickTask(T run, Consumer<T> tickAction) {
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (run.getState() == AbstractSpeedrun.State.RUNNING) {
+            if (run.getState() == Speedrun.State.RUNNING) {
                 tickAction.accept(run);
             }},
             0L,
@@ -286,7 +302,7 @@ public abstract class AbstractGameModeManager<T extends AbstractSpeedrun> implem
      *
      * @param run the run whose tasks should be canceled
      */
-    protected void cancelTasks(T run) {
+    protected void cancelTasks(Speedrun run) {
         if (run.getTimerUpdateTask() != null) run.getTimerUpdateTask().cancel(); run.setTimerUpdateTask(null);
         if (run.getTimeoutTask() != null) run.getTimeoutTask().cancel(); run.setTimeoutTask(null);
     }

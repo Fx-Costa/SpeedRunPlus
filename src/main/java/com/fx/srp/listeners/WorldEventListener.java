@@ -1,8 +1,7 @@
 package com.fx.srp.listeners;
 
 import com.fx.srp.managers.GameManager;
-import com.fx.srp.model.run.AbstractSpeedrun;
-import com.fx.srp.model.run.ISpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import lombok.AllArgsConstructor;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -41,16 +40,16 @@ public class WorldEventListener implements Listener {
         if (killer == null) return;
 
         // Determine which run this player participates in
-        Optional<ISpeedrun> run = gameManager.getActiveRun(killer);
+        Optional<Speedrun> run = gameManager.getActiveRun(killer);
         if (run.isEmpty()) return; // Not in a speedrun
 
-        ISpeedrun speedrun = run.get();
+        Speedrun speedrun = run.get();
 
         // Only process if the run is actually running
-        if (speedrun.getState() != AbstractSpeedrun.State.RUNNING) return;
+        if (speedrun.getState() != Speedrun.State.RUNNING) return;
 
         // Trigger completion logic on the run manager
-        gameManager.finishRun(speedrun, killer);
+        gameManager.completeRun(speedrun, killer);
     }
 }
 

@@ -1,6 +1,6 @@
 package com.fx.srp.managers;
 
-import com.fx.srp.model.run.ISpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,13 +11,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Maintains a registry of all currently active speedruns and the players
  * participating in them.
  *
  * <p>This singleton class allows tracking, adding, removing, and querying
- * active runs. Each player is associated with a single {@link ISpeedrun} at a time.</p>
+ * active runs. Each player is associated with a single {@link Speedrun} at a time.</p>
  *
  * <p>Provides a singleton instance accessible via {@link #getINSTANCE()}.
  */
@@ -26,7 +27,7 @@ public class ActiveRunRegistry {
 
     @Getter private static final ActiveRunRegistry INSTANCE = new ActiveRunRegistry();
 
-    private final Map<UUID, ISpeedrun> activeRuns = new ConcurrentHashMap<>();
+    private final Map<UUID, Speedrun> activeRuns = new ConcurrentHashMap<>();
 
     /**
      * Checks whether the given player is currently participating in any active run.
@@ -42,9 +43,9 @@ public class ActiveRunRegistry {
      * Registers a player in an active run.
      *
      * @param playerId the UUID of the player
-     * @param run the {@link ISpeedrun} the player is participating in
+     * @param run the {@link Speedrun} the player is participating in
      */
-    public void addRun(UUID playerId, ISpeedrun run) {
+    public void addRun(UUID playerId, Speedrun run) {
         activeRuns.put(playerId, run);
     }
 
@@ -61,18 +62,18 @@ public class ActiveRunRegistry {
      * Retrieves the active run associated with a player.
      *
      * @param playerId the UUID of the player
-     * @return the {@link ISpeedrun} the player is in, or {@code null} if none
+     * @return the {@link Speedrun} the player is in, or {@code null} if none
      */
-    public ISpeedrun getActiveRun(UUID playerId) {
+    public Speedrun getActiveRun(UUID playerId) {
         return activeRuns.get(playerId);
     }
 
     /**
      * Returns a collection of all currently active runs.
      *
-     * @return a {@link Collection} of {@link ISpeedrun} objects
+     * @return a {@link Collection} of {@link Speedrun} objects
      */
-    public Collection<ISpeedrun> getAllRuns() {
+    public Collection<Speedrun> getAllRuns() {
         return activeRuns.values();
     }
 
@@ -83,5 +84,17 @@ public class ActiveRunRegistry {
      */
     public List<UUID> getAllPlayersInRuns() {
         return new ArrayList<>(activeRuns.keySet());
+    }
+
+    /**
+     * Returns a list of all player UUIDs currently participating in any run.
+     *
+     * @return a {@link List} of player UUIDs
+     */
+    public List<UUID> getAllPlayersInRun(Speedrun run) {
+        return activeRuns.entrySet().stream()
+                .filter(entry -> entry.getValue() == run)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 }

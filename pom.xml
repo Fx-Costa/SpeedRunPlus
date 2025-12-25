@@ -6,12 +6,11 @@
 
     <groupId>com.fx</groupId>
     <artifactId>srp</artifactId>
-    <version>test</version>
+    <version>local</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>11</java.version>
-        <empty.version>-</empty.version>
 
         <!-- Paper API version -->
         <paper-api.version>1.16.1-R0.1-SNAPSHOT</paper-api.version>
@@ -28,17 +27,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-
         <!-- Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.42</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Dependencies to other plugins -->
@@ -46,16 +40,20 @@
             <groupId>com.github.Multiverse</groupId>
             <artifactId>Multiverse-Core</artifactId>
             <version>4.3.16</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/Multiverse-Core-4.3.16.jar</systemPath>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>com.github.Multiverse</groupId>
             <artifactId>Multiverse-NetherPortals</artifactId>
             <version>4.2.3</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/Multiverse-NetherPortals-4.2.3.jar</systemPath>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>cloud.commandframework</groupId>
+            <artifactId>cloud-paper</artifactId>
+            <version>1.8.4</version>
         </dependency>
 
     </dependencies>
@@ -67,6 +65,33 @@
                 <directory>src/main/resources</directory>
                 <filtering>false</filtering>
             </resource>
+
+            <!-- Add the third-party licenses and notice -->
+            <resource>
+                <directory>third-party</directory>
+                <targetPath>META-INF/third-party/</targetPath>
+                <filtering>false</filtering>
+            </resource>
+
+            <!-- Add the project's license -->
+            <resource>
+                <directory>${basedir}</directory>
+                <includes>
+                    <include>LICENSE.md</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+                <filtering>false</filtering>
+            </resource>
+
+            <!-- Add the project's notice-->
+            <resource>
+                <directory>${basedir}</directory>
+                <includes>
+                    <include>NOTICE.md</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+                <filtering>true</filtering>
+            </resource>
         </resources>
 
         <plugins>
@@ -75,11 +100,64 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
+
+            <!-- Maven shade -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+
+                            <!-- Exclude metadata (except for licenses and notices) -->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Delete the unshaded (original) JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete file="${project.build.directory}/original-${project.build.finalName}.jar"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 

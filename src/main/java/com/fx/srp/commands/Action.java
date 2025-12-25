@@ -1,56 +1,74 @@
 package com.fx.srp.commands;
 
+import cloud.commandframework.arguments.CommandArgument;
+import cloud.commandframework.bukkit.parsers.PlayerArgument;
+import cloud.commandframework.context.CommandContext;
+import com.fx.srp.managers.GameManager;
 import lombok.Getter;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.BiConsumer;
 
 @Getter
 public enum Action {
-    HELP("help", false),
-    START("start", false),
-    RESET("reset", false),
-    STOP("stop", false),
-    REQUEST("request", true),
-    ACCEPT("accept", false),
-    DECLINE("decline", false),
-    SURRENDER("surrender", false);
 
-    private final String name;
-    private final boolean requiredWithPlayerArg;
+    START((gameManager, ctx) -> {
+        Player sender = (Player) ctx.getSender();
+        GameMode gameMode = ctx.get(CommandRegistry.ContextKeys.GAME_MODE.getKey());
+        gameMode.getManager().start(sender);
+    }),
+
+    RESET((gameManager, ctx) -> {
+        Player sender = (Player) ctx.getSender();
+        GameMode gameMode = ctx.get(CommandRegistry.ContextKeys.GAME_MODE.getKey());
+        gameMode.getManager().reset(sender);
+    }),
+
+    STOP((gameManager, ctx) -> {
+        Player sender = (Player) ctx.getSender();
+        gameManager.abortRun(sender);
+    }),
+
+    REQUEST((gameManager, ctx) -> {
+        Player sender = (Player) ctx.getSender();
+        GameMode gameMode = ctx.get(CommandRegistry.ContextKeys.GAME_MODE.getKey());
+        Player target = ctx.get(CommandRegistry.ContextKeys.PLAYER_TARGET.getKey());
+        gameMode.getManager().asMultiplayerManager().ifPresent(gameModeManager ->
+                gameModeManager.request(sender, target, gameMode)
+        );
+    }, PlayerArgument.of(CommandRegistry.ContextKeys.PLAYER_TARGET.getKey())),
+
+    ACCEPT((gameManager, ctx) -> {
+        GameMode gameMode = ctx.get(CommandRegistry.ContextKeys.GAME_MODE.getKey());
+        gameMode.getManager().asMultiplayerManager().ifPresent(gameModeManager ->
+                gameModeManager.accept((Player) ctx.getSender())
+        );
+    }),
+
+    DECLINE((gameManager, ctx) -> {
+        GameMode gameMode = ctx.get(CommandRegistry.ContextKeys.GAME_MODE.getKey());
+        Player target = ctx.get(CommandRegistry.ContextKeys.PLAYER_TARGET.getKey());
+        gameMode.getManager().asMultiplayerManager().ifPresent(gameModeManager ->
+                gameModeManager.decline(target)
+        );
+    });
+
+    private final BiConsumer<GameManager, CommandContext<CommandSender>> executor;
+    private final List<CommandArgument<CommandSender, ?>> arguments;
 
     /**
-     * Creates an action for SRPCommands.
+     * Creates an action for the SRP Commands.
      *
-     * @param name                  the name of the game mode
-     * @param requiredWithPlayerArg whether the action requires a player-name argument
+     * @param executor the executor for the command
      */
-    Action(String name, boolean requiredWithPlayerArg) {
-        this.name = name;
-        this.requiredWithPlayerArg = requiredWithPlayerArg;
-    }
-
-    /**
-     * Attempts to match a string to a {@link Action} by its command name.
-     *
-     * @param input the user-provided action name
-     * @return the matching {@code Action}, or {@code null} if none match
-     */
-    public static Action parse(String input, GameMode mode) {
-        return mode.getActions().stream()
-                .filter(a -> a.getName().equalsIgnoreCase(input))
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Attempts to match a string to a {@link Action} by its command name.
-     *
-     * @param input the user-provided action name
-     * @return the matching {@code Action}, or {@code null} if none match
-     */
-    public static Action parse(String input) {
-        for (Action action : values()) {
-            if (action.name.equalsIgnoreCase(input)) return action;
-        }
-        return null;
+    @SafeVarargs
+    Action(BiConsumer<GameManager, CommandContext<CommandSender>> executor, CommandArgument<CommandSender, ?>... args) {
+        this.executor = executor;
+        this.arguments = new ArrayList<>();
+        if (args != null) this.arguments.addAll(Arrays.asList(args));
     }
 }
-

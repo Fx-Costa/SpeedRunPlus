@@ -1,14 +1,14 @@
 package com.fx.srp.managers.gamemodes;
 
 import com.fx.srp.SpeedRunPlus;
-import com.fx.srp.commands.Action;
-import com.fx.srp.commands.SRPCommand;
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.managers.util.WorldManager;
-import com.fx.srp.model.run.AbstractSpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.SoloSpeedrun;
 import com.fx.srp.util.time.TimeFormatter;
+import com.fx.srp.commands.GameMode;
+import lombok.NonNull;
 import org.apache.commons.lang.time.StopWatch;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -21,13 +21,12 @@ import java.util.Optional;
  *
  * <p>Responsibilities include:</p>
  * <ul>
- *     <li>Handling SRP solo commands: {@link Action#START}, {@link Action#STOP}, {@link Action#RESET}</li>
  *     <li>Starting, resetting, and stopping {@link SoloSpeedrun} instances</li>
  *     <li>Managing player state, teleportation, and world creation</li>
  *     <li>Displaying countdowns, titles, and final time to the player</li>
  * </ul>
  */
-public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
+public class SoloManager extends GameModeManager<SoloSpeedrun> {
 
     /**
      * Constructs a new SoloManager.
@@ -38,29 +37,6 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
      */
     public SoloManager(SpeedRunPlus plugin, GameManager gameManager, WorldManager worldManager) {
         super(plugin, gameManager, worldManager);
-    }
-
-    /* ==========================================================
-     *                       COMMANDS
-     * ========================================================== */
-    /**
-     * Handles a {@link SRPCommand} for a solo player.
-     *
-     * <p>Delegates to the appropriate method based on the {@link Action}:
-     * START, STOP, RESET.</p>
-     *
-     * @param player the player executing the command
-     * @param command the parsed {@link SRPCommand}
-     */
-    @Override
-    public void handleCommand(Player player, SRPCommand command) {
-        Action action = command.getAction();
-        switch (action) {
-            case START: start(player); break;
-            case STOP: getActiveRun(player).ifPresent(run -> stop(run, null)); break;
-            case RESET: getActiveRun(player).ifPresent(run -> reset(run, player)); break;
-            default: player.sendMessage(ChatColor.RED + "Invalid command!"); break;
-        }
     }
 
     /* ==========================================================
@@ -85,7 +61,7 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
         Speedrunner runner = new Speedrunner(player, stopWatch);
         runner.captureState();
 
-        SoloSpeedrun soloSpeedrun = new SoloSpeedrun(gameManager, runner, stopWatch, null);
+        SoloSpeedrun soloSpeedrun = new SoloSpeedrun(GameMode.SOLO, runner, stopWatch, null);
         gameManager.registerRun(soloSpeedrun);
 
         initializeRun(soloSpeedrun);
@@ -120,17 +96,21 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
      *
      * <p>Teleports the player, recreates worlds with the previous seed, and more.</p>
      *
-     * @param soloSpeedrun the solo run to reset
      * @param player the player requesting the reset
      */
-    public void reset(SoloSpeedrun soloSpeedrun, Player player) {
-        // If not already in a run
-        if (!gameManager.isInRun(player)) {
+    public void reset(Player player) {
+        // If not already in a speedrun
+        Optional<Speedrun> optional = gameManager.getActiveRun(player);
+        if (optional.isEmpty()) {
             player.sendMessage(ChatColor.RED + "You are not in a speedrun!");
             return;
         }
 
-        soloSpeedrun.setState(AbstractSpeedrun.State.CREATING_WORLDS);
+        // Get the run
+        SoloSpeedrun soloSpeedrun = (SoloSpeedrun) optional.get();
+
+        // Update the state
+        soloSpeedrun.setState(Speedrun.State.CREATING_WORLDS);
 
         // Get the seed of the existing world
         Long seed = soloSpeedrun.getSeed();
@@ -138,52 +118,51 @@ public class SoloManager extends AbstractGameModeManager<SoloSpeedrun> {
         player.sendMessage(ChatColor.YELLOW + "Resetting the world...");
         Speedrunner speedrunner = soloSpeedrun.getSpeedrunners().get(0);
 
-        recreateWorldsForReset(speedrunner, seed, () -> soloSpeedrun.setState(AbstractSpeedrun.State.RUNNING));
+        recreateWorldsForReset(speedrunner, seed, () -> soloSpeedrun.setState(Speedrun.State.RUNNING));
     }
 
     /* ==========================================================
      *                       STOP SOLO RUN
      * ========================================================== */
     /**
-     * Stops a {@link SoloSpeedrun}, optionally announcing the player's time.
+     * Stops a {@link SoloSpeedrun} announcing the player's time as a win.
      *
-     * <p>Displays a title with the final run time and calls {@link AbstractGameModeManager#finishRun}
+     * <p>Displays a title with the final run time and calls {@link GameModeManager#finishRun}
      * for cleanup.</p>
      *
-     * @param soloSpeedrun the solo run to stop
-     * @param player the player who completed the run (nullable)
+     * @param winner the player who completed the run
      */
     @Override
-    public void stop(SoloSpeedrun soloSpeedrun, Player player) {
-        soloSpeedrun.setState(AbstractSpeedrun.State.FINISHED);
-
-        // Announce winner and time
-        if (player != null) {
-            // Get the final time
-            String formattedTime = new TimeFormatter(soloSpeedrun.getStopWatch())
-                    .withHours()
-                    .withSuperscriptMs()
-                    .format();
-
-            player.sendTitle(
-                    ChatColor.GREEN + "You won! ",
-                    ChatColor.GREEN + "With a time of: " +
-                            ChatColor.ITALIC + ChatColor.GRAY + formattedTime,
-                    10,
-                    140,
-                    20
-            );
+    public void stop(@NonNull Player winner) {
+        // If not already in a speedrun
+        Optional<Speedrun> optional = gameManager.getActiveRun(winner);
+        if (optional.isEmpty()) {
+            winner.sendMessage(ChatColor.RED + "You are not in a speedrun!");
+            return;
         }
 
-        int delayTicks = player == null ? 0 : 200;
-        finishRun(soloSpeedrun, delayTicks);
-    }
+        // Get the run
+        SoloSpeedrun soloSpeedrun = (SoloSpeedrun) optional.get();
 
-    /* ==========================================================
-     *                      HELPERS
-     * ========================================================== */
-    private Optional<SoloSpeedrun> getActiveRun(Player player) {
-        return gameManager.getActiveRun(player).filter(r -> r instanceof SoloSpeedrun)
-                .map(r -> (SoloSpeedrun) r);
+        // Update the state
+        soloSpeedrun.setState(Speedrun.State.FINISHED);
+
+        // Get the final time
+        String formattedTime = new TimeFormatter(soloSpeedrun.getStopWatch())
+                .withHours()
+                .withSuperscriptMs()
+                .format();
+
+        // Announce winner and time
+        winner.sendTitle(
+                ChatColor.GREEN + "You won! ",
+                ChatColor.GREEN + "With a time of: " +
+                        ChatColor.ITALIC + ChatColor.GRAY + formattedTime,
+                10,
+                140,
+                20
+        );
+
+        finishRun(soloSpeedrun, 200);
     }
 }

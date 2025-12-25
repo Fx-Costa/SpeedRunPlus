@@ -7,16 +7,6 @@ depend:
   - Multiverse-Core
   - Multiverse-NetherPortals
 
-commands:
-  srp:
-    description: Main command for SpeedRunPlus.
-    usage: /srp <gamemode> <action> [player]
-    aliases: []
-    tab-complete:
-      - "<gamemode>"
-      - "<action>"
-      - "[player]"
-
 permissions:
   # Admin commands
   srp.admin:
@@ -28,6 +18,7 @@ permissions:
     description: Allows overall usage of /srp
     default: true
 
+  # Game modes
   srp.solo:
     description: Allows usage of the solo game mode
     default: true
@@ -38,51 +29,4 @@ permissions:
 
   srp.coop:
     description: Allows usage of the coop game mode
-    default: true
-
-  # Solo
-  srp.solo.start:
-    description: Allows starting a run
-    default: true
-
-  srp.solo.reset:
-    description: Allows resetting a run
-    default: true
-
-  srp.solo.stop:
-    description: Allows stopping a run
-    default: true
-
-  # Coop
-  srp.coop.request:
-    description: Allows requesting another player for a run
-    default: true
-
-  srp.coop.accept:
-    description: Allows accepting a request for a run
-    default: true
-
-  srp.coop.decline:
-    description: Allows declining a request for a run
-    default: true
-
-  srp.coop.stop:
-    description: Allows stopping a run
-    default: true
-
-  # Battle
-  srp.battle.request:
-    description: Allows requesting another player for a run
-    default: true
-
-  srp.battle.accept:
-    description: Allows accepting a request for a run
-    default: true
-
-  srp.battle.decline:
-    description: Allows declining a request for a run
-    default: true
-
-  srp.battle.surrender:
-    description: Allows surrendering a run
     default: true
