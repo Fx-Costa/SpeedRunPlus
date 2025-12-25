@@ -74,6 +74,25 @@ jobs:
         run: |
           curl -L -o libs/Multiverse-NetherPortals-4.2.3.jar "${{ vars.MULTIVERSE_NETHERPORTALS_DOWNLOAD_URL }}"
 
+      # Add dependencies to Maven (.m2) repo
+      - name: Install Multiverse-Core to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=libs/Multiverse-Core-4.3.16.jar \
+            -DgroupId=com.github.Multiverse \
+            -DartifactId=Multiverse-Core \
+            -Dversion=4.3.16 \
+            -Dpackaging=jar
+
+      - name: Install Multiverse-NetherPortals to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=libs/Multiverse-NetherPortals-4.2.3.jar \
+            -DgroupId=com.github.Multiverse \
+            -DartifactId=Multiverse-NetherPortals \
+            -Dversion=4.2.3 \
+            -Dpackaging=jar
+
       # Java & Maven setup
       - name: Set up JDK 11
         uses: actions/setup-java@v4

@@ -4,6 +4,8 @@ import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.model.seed.SeedCategory;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.command.CommandSender;
 
 import java.io.*;
 import java.net.URI;
@@ -176,24 +178,48 @@ public class SeedManager {
      * Asynchronously adds a number of seeds to the given {@link SeedCategory.SeedType}.
      * <p>
      * This method schedules the addition to run on a separate thread to avoid blocking
-     * the main server thread. Newly added seeds are persisted to their corresponding CSV files.
+     * the main server thread. Newly added seeds are persisted to their corresponding CSV files and are written to
+     * memory to avoid having to restart/reload the server.
      * </p>
      *
      * @param seedType the category of seeds to add
-     * @param amount   the number of seeds to add (will be capped at a predefined maximum)
+     * @param amount   the number of seeds to add (between 1 and 10 (inclusive))
+     * @param sender   the {@code CommandSender} responsible for adding the seed
      */
-    public void addSeedAsync(SeedCategory.SeedType seedType, int amount) {
-        if (seedType == SeedCategory.SeedType.RANDOM || amount < 1) return;
+    public void addSeedAsync(SeedCategory.SeedType seedType, int amount, CommandSender sender) {
+        if (amount < 1) {
+            sender.sendMessage(Color.RED + "The amount must be greater than 0!");
+            return;
+        }
+        if (amount > 10) {
+            sender.sendMessage(Color.RED + "The amount must be less than 10!");
+            return;
+        }
+        if (seedType == SeedCategory.SeedType.RANDOM) {
+            sender.sendMessage(Color.RED + "No need to add seeds of this type!");
+            return;
+        }
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            final int maximumSeedRequestAmount = 10;
-            requestSeeds(seedType, Math.min(amount, maximumSeedRequestAmount));
+            int newSeedCount = requestSeeds(seedType, amount);
+
+            // Feedback
+            Color color = newSeedCount == amount ? Color.GREEN : newSeedCount > amount / 2 ? Color.YELLOW : Color.RED;
+            String successMessage = newSeedCount > 0 ? "Successfully" : "Unsuccessfully";
+            String message = String.format(
+                    "%s %s added %d new %s seeds!",
+                    color,
+                    successMessage,
+                    newSeedCount,
+                    seedType.name()
+            );
+            sender.sendMessage(message);
         });
     }
 
-    private void requestSeeds(SeedCategory.SeedType seedType, int amount) {
+    private int requestSeeds(SeedCategory.SeedType seedType, int amount) {
         File seedFile = seedFiles.get(seedType);
-        if (seedFile == null) return;
+        if (seedFile == null) return 0;
 
         // Find category in memory
         SeedCategory category = seedCategories.stream()
@@ -201,7 +227,7 @@ public class SeedManager {
                 .findFirst()
                 .orElse(null);
 
-        if (category == null) return;
+        if (category == null) return 0;
 
         List<Long> existingSeeds = category.getSeeds();
         List<Long> newSeeds = new ArrayList<>();
@@ -230,10 +256,11 @@ public class SeedManager {
         // Persist seeds to the seed file
         persistSeeds(seedType, newSeeds);
 
-        // Write the seeds them to memory (ensuring that a reload is not necessary)
+        // Write the seeds to memory (ensuring that a reload is not necessary)
         existingSeeds.addAll(newSeeds);
 
         logger.info("[SRP] Added " + newSeeds.size() + " seeds to " + seedType.name() + "!");
+        return newSeeds.size();
     }
 
     private Optional<Long> parseResponse(String body) {

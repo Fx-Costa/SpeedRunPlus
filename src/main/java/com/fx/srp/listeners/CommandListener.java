@@ -3,6 +3,8 @@ package com.fx.srp.listeners;
 import com.fx.srp.commands.Action;
 import com.fx.srp.commands.GameMode;
 import com.fx.srp.managers.GameManager;
+import com.fx.srp.model.run.ISpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import lombok.AllArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -12,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * Listener responsible for restricting command execution while a player
@@ -50,14 +53,21 @@ public class CommandListener implements Listener {
         if (player.hasPermission("srp.admin")) return;
 
         // Player must be in an active run
-        if (!gameManager.isInRun(player)) return;
+        Optional<Speedrun> run = gameManager.getActiveRun(player);
+        if (run.isEmpty()) return;
+
+        // If the run is not in a running state, block it
+        if (!run.get().getState().equals(ISpeedrun.State.RUNNING)) {
+            block(event, player, "Please wait...");
+            return;
+        }
 
         // Partially parse the command
         String[] parts = event.getMessage().substring(1).split(" ", 4);
 
         // If not a valid SRP command allowed during runs, block it
         if (parts.length < 3 || !"srp".equalsIgnoreCase(parts[0]) || !isValid(parts[1], parts[2])) {
-            block(event, player);
+            block(event, player,"You cannot use this command during a run!");
         }
     }
 
@@ -72,8 +82,8 @@ public class CommandListener implements Listener {
         }
     }
 
-    private void block(PlayerCommandPreprocessEvent event, Player player) {
+    private void block(PlayerCommandPreprocessEvent event, Player player, String reason) {
         event.setCancelled(true);
-        player.sendMessage(ChatColor.RED + "You cannot use this command during a run!");
+        player.sendMessage(ChatColor.RED + reason);
     }
 }

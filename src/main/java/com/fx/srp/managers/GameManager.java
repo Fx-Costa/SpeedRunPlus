@@ -319,9 +319,9 @@ public class GameManager {
     /**
      * Add filtered seeds to the seed files
      */
-    public void addSeed(SeedCategory.SeedType seedType, Integer amount){
+    public void addSeed(SeedCategory.SeedType seedType, Integer amount, CommandSender sender) {
         if (seedType == null || amount == null) return;
-        seedManager.addSeedAsync(seedType, amount);
+        seedManager.addSeedAsync(seedType, amount, sender);
     }
 
     /**

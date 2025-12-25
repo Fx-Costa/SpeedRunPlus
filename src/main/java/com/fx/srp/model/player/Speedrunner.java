@@ -145,9 +145,6 @@ public class Speedrunner {
         // Restore using the saved state
         inventory.setArmorContents(getSavedArmor());
         inventory.setContents(getSavedInventory());
-        player.setLevel(getSavedLevel());
-        player.setExp(getSavedExp());
-        player.setGameMode(getSavedGameMode());
         for (Map.Entry<Advancement, Set<String>> entry : getSavedAdvancements().entrySet()) {
             Advancement advancement = entry.getKey();
             AdvancementProgress progress = player.getAdvancementProgress(advancement);
@@ -155,6 +152,9 @@ public class Speedrunner {
                 progress.awardCriteria(criterion);
             }
         }
+        player.setLevel(getSavedLevel());
+        player.setExp(getSavedExp());
+        player.setGameMode(getSavedGameMode());
     }
 
     /* ==========================================================
