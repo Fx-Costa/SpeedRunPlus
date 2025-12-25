@@ -99,6 +99,21 @@ public class LeaderboardManager {
         updatePodium();
     }
 
+    /**
+     * Unload the podium by destroying the armor stands
+     */
+    public void unloadPodium() {
+        clearPodium();
+    }
+
+    /**
+     * Load the podium re-creating armor stands from the leaderboard file
+     */
+    public void loadPodium() {
+        loadLeaderboard();
+        updatePodium();
+    }
+
     /* ==========================================================
      *                      Helpers
      * ========================================================== */
@@ -139,11 +154,11 @@ public class LeaderboardManager {
             return;
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            clearOldPodium();
-            List<Location> locations = new ArrayList<>(configHandler.getPodiumPositions().values());
-            World world = configHandler.getPodiumWorld();
+        clearPodium();
+        List<Location> locations = new ArrayList<>(configHandler.getPodiumPositions().values());
+        World world = configHandler.getPodiumWorld();
 
+        Bukkit.getScheduler().runTask(plugin, () -> {
             int count = Math.min(leaderboard.size(), locations.size());
             for (int i = 0; i < count; i++) {
                 createPodiumEntry(leaderboard.get(i), locations.get(i), world);
@@ -178,7 +193,7 @@ public class LeaderboardManager {
         }
     }
 
-    private void clearOldPodium() {
+    private void clearPodium() {
         for (PodiumEntry entry : currentPodium) {
             removeIfExists(entry.headStand);
             removeIfExists(entry.nameStand);
