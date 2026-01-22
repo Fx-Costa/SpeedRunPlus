@@ -10,6 +10,9 @@ main-end: world_the_end
 # Game rule settings
 game-rules:
 
+  # Assisted triangulation
+  use-assisted-triangulation: false
+
   # Speedrun world seeds
   filtered-seeds:
     # Whether to use filtered seeds or rely on random seeds

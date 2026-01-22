@@ -1,13 +1,19 @@
 package com.fx.srp.listeners;
 
 import com.fx.srp.managers.GameManager;
+import com.fx.srp.model.EyeThrow;
 import com.fx.srp.model.run.Speedrun;
 import lombok.AllArgsConstructor;
+import org.bukkit.Location;
+import org.bukkit.entity.EnderSignal;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.util.Vector;
 
 import java.util.Optional;
 
@@ -50,6 +56,30 @@ public class WorldEventListener implements Listener {
 
         // Trigger completion logic on the run manager
         gameManager.completeRun(speedrun, killer);
+    }
+
+    @EventHandler
+    public void onEyeThrow(ProjectileLaunchEvent event) {
+        if (!(event.getEntity() instanceof EnderSignal)) return;
+
+        Projectile projectile = event.getEntity();
+        if (!(projectile.getShooter() instanceof Player)) return;
+
+        Player player = (Player) projectile.getShooter();
+
+        // Determine which run this player participates in
+        Optional<Speedrun> run = gameManager.getActiveRun(player);
+        if (run.isEmpty()) return; // Not in a speedrun
+
+        Speedrun speedrun = run.get();
+
+        // Only process if the run is actually running
+        if (speedrun.getState() != Speedrun.State.RUNNING) return;
+
+        // TODO: Ensure that the event is triggered in the overworld
+
+        // Record the eye throw
+        gameManager.recordEyeThrow(player, projectile);
     }
 }
 

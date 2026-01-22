@@ -15,11 +15,13 @@ import com.fx.srp.model.run.SoloSpeedrun;
 import com.fx.srp.model.run.BattleSpeedrun;
 import com.fx.srp.model.run.CoopSpeedrun;
 import com.fx.srp.model.seed.SeedCategory;
+import com.fx.srp.util.TriangulationCalculator;
 import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -228,6 +230,42 @@ public class GameManager {
     /* ==========================================================
      *                    Event management
      * ========================================================== */
+    /**
+     * Assisted triangulation
+     */
+    public void recordEyeThrow(Player player, Projectile projectile) {
+        // TODO: Only do this if the assistedTriangulation config is enabled
+
+        getSpeedrunner(player).ifPresent(runner -> {
+            int eyeThrowCount = runner.getEyeThrows().size();
+
+            // Do not record a third throw
+            if (eyeThrowCount >= 2) return;
+
+            // TODO: Ensure the 2nd throw is not on the same position as the first!
+
+            // Record the throw
+            runner.addEyeThrow(projectile);
+            player.sendMessage(ChatColor.YELLOW +
+                    "1st Eye of Ender thrown! Throw another to triangulate the stronghold."
+            );
+
+            // If it is the second throw, perform the triangulation
+            if (eyeThrowCount == 1) {
+                player.sendMessage(ChatColor.YELLOW +
+                        "2nd Eye of Ender thrown! Triangulating the stronghold..."
+                );
+
+                TriangulationCalculator.triangulate(runner.getEyeThrows());
+            }
+
+        });
+
+
+
+
+    }
+
     /**
      * Handles player movement events.
      *

@@ -66,6 +66,16 @@
                 <filtering>false</filtering>
             </resource>
 
+            <!-- Allow filtering on plugin.yml and config.yml -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                    <include>config.yml</include>
+                </includes>
+            </resource>
+
             <!-- Add the third-party licenses and notice -->
             <resource>
                 <directory>third-party</directory>
