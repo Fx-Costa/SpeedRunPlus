@@ -149,7 +149,7 @@ public final class ConfigHandler {
 
     private void loadGameRules() {
         maxPlayers = config.getInt("game-rules.max-players", 4);
-        maxRunTime = config.getLong("game-rules.max-run-time-minutes", 30) * 60 * 1000;
+        maxRunTime = config.getLong("game-rules.max-time-minutes", 30) * 60 * 1000;
         maxRequestTime = config.getLong("game-rules.max-request-seconds", 30) * 1000;
         filteredSeeds = config.getBoolean("game-rules.filtered-seeds.use-filtered-seeds", false);
 
