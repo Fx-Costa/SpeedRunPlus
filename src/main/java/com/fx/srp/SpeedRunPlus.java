@@ -42,6 +42,9 @@ public class SpeedRunPlus extends JavaPlugin {
      */
     @Override
     public void onEnable() {
+        // Add the default config file
+        saveDefaultConfig();
+
         // Load 3rd party plugin dependencies
         loadDependencies();
 
@@ -54,7 +57,18 @@ public class SpeedRunPlus extends JavaPlugin {
         // Register event listeners
         registerListeners();
 
-        logger.info("[SRP] The plugin has started successfully!");
+        // Plugin server console banner
+        String version = getDescription().getVersion();
+        String reset = "\u001B[0m";
+        String yellow = "\u001B[33m";
+        logger.info("");
+        logger.info(yellow + "   ____                _____              __ " + reset);
+        logger.info(yellow + "  / __/__  ___ ___ ___/ / _ \\__ _____  __/ /_" + reset);
+        logger.info(yellow + " _\\ \\/ _ \\/ -_) -_) _  / , _/ // / _ \\/_  __/" + reset);
+        logger.info(yellow + "/___/ .__/\\__/\\__/\\_,_/_/|_|\\_,_/_//_/ /_/   " + reset);
+        logger.info(yellow + "   /_/                                       " + reset);
+        logger.info(yellow + "\tby Fx-Costa" + "\t\t" + "v" + version + reset);
+        logger.info("");
     }
 
     /**

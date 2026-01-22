@@ -82,7 +82,8 @@ public final class ConfigHandler {
      * @param seedType     The type of seed to get the weight for.
      */
     public int getSeedWeight(SeedCategory.SeedType seedType) {
-        return seedWeights.get(seedType);
+        if (!filteredSeeds) return 0;
+        return seedWeights.getOrDefault(seedType, 0);
     }
 
     private void loadConfiguration() {
@@ -94,7 +95,6 @@ public final class ConfigHandler {
         loadAFKSettings();
         loadPodiumSettings();
         loadGameRules();
-        logger.info("[SRP] Configuration file loaded!");
     }
 
     private void loadWorldSettings() {
