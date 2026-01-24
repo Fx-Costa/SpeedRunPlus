@@ -5,17 +5,13 @@ import com.fx.srp.managers.gamemodes.SoloManager;
 import com.fx.srp.managers.gamemodes.BattleManager;
 import com.fx.srp.managers.gamemodes.CoopManager;
 import com.fx.srp.commands.GameMode;
-import com.fx.srp.managers.util.AfkManager;
-import com.fx.srp.managers.util.LeaderboardManager;
-import com.fx.srp.managers.util.SeedManager;
-import com.fx.srp.managers.util.WorldManager;
+import com.fx.srp.managers.util.*;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.model.run.SoloSpeedrun;
 import com.fx.srp.model.run.BattleSpeedrun;
 import com.fx.srp.model.run.CoopSpeedrun;
 import com.fx.srp.model.seed.SeedCategory;
-import com.fx.srp.util.TriangulationCalculator;
 import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -56,6 +52,7 @@ public class GameManager {
     private final SeedManager seedManager;
     private final AfkManager afkManager;
     private final LeaderboardManager leaderboardManager;
+    private final TriangulationManager triangulationManager;
 
     /**
      * Constructs a new {@link GameManager} and initializes all sub-managers
@@ -68,6 +65,7 @@ public class GameManager {
         this.afkManager = new AfkManager(plugin);
         this.leaderboardManager = new LeaderboardManager(plugin);
         this.seedManager = new SeedManager(plugin);
+        this.triangulationManager = new TriangulationManager();
         WorldManager worldManager = new WorldManager(plugin, seedManager);
 
         // Game mode managers
@@ -233,37 +231,9 @@ public class GameManager {
     /**
      * Assisted triangulation
      */
-    public void recordEyeThrow(Player player, Projectile projectile) {
-        // TODO: Only do this if the assistedTriangulation config is enabled
-
-        getSpeedrunner(player).ifPresent(runner -> {
-            int eyeThrowCount = runner.getEyeThrows().size();
-
-            // Do not record a third throw
-            if (eyeThrowCount >= 2) return;
-
-            // TODO: Ensure the 2nd throw is not on the same position as the first!
-
-            // Record the throw
-            runner.addEyeThrow(projectile);
-            player.sendMessage(ChatColor.YELLOW +
-                    "1st Eye of Ender thrown! Throw another to triangulate the stronghold."
-            );
-
-            // If it is the second throw, perform the triangulation
-            if (eyeThrowCount == 1) {
-                player.sendMessage(ChatColor.YELLOW +
-                        "2nd Eye of Ender thrown! Triangulating the stronghold..."
-                );
-
-                TriangulationCalculator.triangulate(runner.getEyeThrows());
-            }
-
-        });
-
-
-
-
+    public void assistedTriangulation(Speedrunner speedrunner, Projectile projectile) {
+        // Perform the assisted triangulation
+        triangulationManager.assistedTriangulation(speedrunner, projectile);
     }
 
     /**

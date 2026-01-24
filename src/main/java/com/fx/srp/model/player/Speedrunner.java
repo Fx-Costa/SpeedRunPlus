@@ -40,7 +40,7 @@ public class Speedrunner {
     private boolean playerFreeze;
 
     // Recorded eye throws by the speedrunner - for assisted triangulation
-    private List<EyeThrow> eyeThrows;
+    private final List<EyeThrow> eyeThrows = new ArrayList<>();
 
     // Worlds
     @Getter @Setter private WorldManager.WorldSet worldSet;
@@ -71,7 +71,7 @@ public class Speedrunner {
         Vector direction = projectile.getVelocity().clone();
         direction.setY(0);
 
-        // Ensure the direction is TODO: complete
+        // Ensure the direction is valid
         if (direction.lengthSquared() == 0) return;
 
         // Build an EyeThrow from the event
@@ -82,6 +82,8 @@ public class Speedrunner {
                 System.currentTimeMillis()
         );
 
+        // Cycle eye throws, keeping track of only the latest two throws
+        if (eyeThrows.size() >= 2) eyeThrows.removeFirst();
         eyeThrows.add(eyeThrow);
     }
 

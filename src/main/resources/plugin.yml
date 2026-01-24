@@ -1,5 +1,5 @@
 name: SRP
-version: 0.0.1
+version: ${project.version}
 author: Fx-Costa
 main: com.fx.srp.SpeedRunPlus
 api-version: 1.16

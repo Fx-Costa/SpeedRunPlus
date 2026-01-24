@@ -64,6 +64,7 @@ public final class ConfigHandler {
     @Getter private long maxRunTime;
     @Getter private long maxRequestTime;
     @Getter private boolean assistedTriangulation;
+    @Getter private String assistedTriangulationStrategy;
     @Getter @Setter private boolean filteredSeeds;
     private Map<SeedCategory.SeedType, Integer> seedWeights;
     @Getter private URL filteredSeedsApi;
@@ -83,7 +84,8 @@ public final class ConfigHandler {
      * @param seedType     The type of seed to get the weight for.
      */
     public int getSeedWeight(SeedCategory.SeedType seedType) {
-        return seedWeights.get(seedType);
+        if (!filteredSeeds) return 0;
+        return seedWeights.getOrDefault(seedType, 0);
     }
 
     private void loadConfiguration() {
@@ -95,7 +97,6 @@ public final class ConfigHandler {
         loadAFKSettings();
         loadPodiumSettings();
         loadGameRules();
-        logger.info("[SRP] Configuration file loaded!");
     }
 
     private void loadWorldSettings() {
@@ -150,10 +151,17 @@ public final class ConfigHandler {
 
     private void loadGameRules() {
         maxPlayers = config.getInt("game-rules.max-players", 4);
-        maxRunTime = config.getLong("game-rules.max-run-time-minutes", 30) * 60 * 1000;
+        maxRunTime = config.getLong("game-rules.max-time-minutes", 30) * 60 * 1000;
         maxRequestTime = config.getLong("game-rules.max-request-seconds", 30) * 1000;
-        assistedTriangulation = config.getBoolean("game-rules.use-assisted-triangulation", false);
         filteredSeeds = config.getBoolean("game-rules.filtered-seeds.use-filtered-seeds", false);
+        assistedTriangulation = config.getBoolean(
+                "game-rules.assisted-triangulation.use-assisted-triangulation",
+                false
+        );
+        assistedTriangulationStrategy = config.getString(
+                "game-rules.assisted-triangulation.strategy",
+                "DETERMINISTIC"
+        );
 
         // Seed weights
         seedWeights = new ConcurrentHashMap<>();

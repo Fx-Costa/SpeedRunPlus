@@ -7,6 +7,10 @@ on:
         description: The version to deploy
         type: choice
         options:
+          - 2.0.4-SNAPSHOT
+          - 2.0.3-SNAPSHOT
+          - 2.0.2-SNAPSHOT
+          - 2.0.1-SNAPSHOT
           - 2.0.0
           - 2.0.0-SNAPSHOT
           - 1.2.0-SNAPSHOT

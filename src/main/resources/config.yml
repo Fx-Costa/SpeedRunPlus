@@ -11,7 +11,14 @@ main-end: world_the_end
 game-rules:
 
   # Assisted triangulation
-  use-assisted-triangulation: false
+  assisted-triangulation:
+
+    # Whether to use assisted triangulation
+    use-assisted-triangulation: false
+
+    # The triangulation strategy - specifies the triangulation algorithm and thereby the level of assistance and
+    # variance during the assisted triangulation
+    strategy: DETERMINISTIC
 
   # Speedrun world seeds
   filtered-seeds:
