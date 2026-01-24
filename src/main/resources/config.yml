@@ -14,7 +14,7 @@ game-rules:
   assisted-triangulation:
 
     # Whether to use assisted triangulation
-    use-assisted-triangulation: false
+    use-assisted-triangulation: true
 
     # The triangulation strategy - specifies the triangulation algorithm and thereby the level of assistance and
     # variance during the assisted triangulation
@@ -23,7 +23,7 @@ game-rules:
   # Speedrun world seeds
   filtered-seeds:
     # Whether to use filtered seeds or rely on random seeds
-    use-filtered-seeds: false
+    use-filtered-seeds: true
 
     # Filtered seeds API
     filtered-seeds-api: https://filteredseed.com/getRandomUsedSeed/
@@ -31,10 +31,10 @@ game-rules:
     # Weights for each type of seed (higher number = more likely to appear)
     weights:
       MAPLESS: 1
-      VILLAGE: 1
-      TEMPLE: 1
-      SHIPWRECK: 1
-      RUINED_PORTAL: 1
+      VILLAGE: 3
+      TEMPLE: 2
+      SHIPWRECK: 2
+      RUINED_PORTAL: 2
       RANDOM: 1
 
   # Maximum number of players allowed to speedrun simultaneously
@@ -59,14 +59,34 @@ timer:
 
 # Podium configuration
 podium:
-  max: 10
+  max: 5
   world: world
   positions:
     1:
-      x: 0.5
-      y: 80.5
-      z: 0.5
-      yaw: 90
+      x: 256.5
+      y: 65.5
+      z: 183.5
+      yaw: 180
+    2:
+      x: 254.5
+      y: 64.5
+      z: 182.5
+      yaw: 180
+    3:
+      x: 258.5
+      y: 64.5
+      z: 182.5
+      yaw: 180
+    4:
+      x: 260.5
+      y: 63.5
+      z: 181.5
+      yaw: 180
+    5:
+      x: 104.5
+      y: 63.5
+      z: 181.5
+      yaw: 180
 
 # AFK configuration
 afk:

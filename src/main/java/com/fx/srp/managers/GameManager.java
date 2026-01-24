@@ -6,6 +6,7 @@ import com.fx.srp.managers.gamemodes.BattleManager;
 import com.fx.srp.managers.gamemodes.CoopManager;
 import com.fx.srp.commands.GameMode;
 import com.fx.srp.managers.util.*;
+import com.fx.srp.model.EyeThrow;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.model.run.SoloSpeedrun;
@@ -17,7 +18,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -231,9 +231,9 @@ public class GameManager {
     /**
      * Assisted triangulation
      */
-    public void assistedTriangulation(Speedrunner speedrunner, Projectile projectile) {
+    public void assistedTriangulation(Speedrunner speedrunner, EyeThrow eyeThrow) {
         // Perform the assisted triangulation
-        triangulationManager.assistedTriangulation(speedrunner, projectile);
+        triangulationManager.assistedTriangulation(speedrunner, eyeThrow);
     }
 
     /**

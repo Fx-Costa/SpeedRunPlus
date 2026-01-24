@@ -2,21 +2,23 @@ package com.fx.srp.listeners;
 
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.managers.GameManager;
+import com.fx.srp.model.EyeThrow;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
 import lombok.AllArgsConstructor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EnderSignal;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
+import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -70,25 +72,36 @@ public class WorldEventListener implements Listener {
     }
 
     /**
-     * Handles {@link ProjectileLaunchEvent} for assisted triangulation.
+     * Handles {@link EntitySpawnEvent} for assisted triangulation.
      *
-     * <p>Ensures that when ender eyes are thrown in the speedrun overworld, assisted triangulation is triggered</p>
+     * <p>Ensures that when an ender signal is spawned in the speedrun overworld, assisted triangulation is triggered.
+     * </p>
      *
-     * @param event the projectile launch event triggered by an ender eye throw in the speedrun overworld     */
+     * @param event the ender signal spawn event triggered by an ender eye throw in the speedrun overworld
+     */
     @EventHandler
-    public void onEyeThrow(ProjectileLaunchEvent event) {
+    public void onEyeThrow(EntitySpawnEvent event) {
+        // Ensure the event is caused by an ender signal spawning
+        if (!(event.getEntity() instanceof EnderSignal)) {
+            return;
+        }
+
         // Only if assisted triangulation is enabled
         if (!configHandler.isAssistedTriangulation()) return;
 
-        // Ensure the event is caused by an eye of ender being thrown
-        if (!(event.getEntity() instanceof EnderSignal)) return;
+        // Ender signal info and flight data
+        EnderSignal eye = (EnderSignal) event.getEntity();
+        World world = eye.getWorld();
+        Location spawnLocation = eye.getLocation();
+        Location targetLocation = eye.getTargetLocation();
 
-        // Ensure the event is caused by a player
-        Projectile projectile = event.getEntity();
-        if (!(projectile.getShooter() instanceof Player)) return;
+        // Infer the responsible player by finding the nearest player (within 1 block) to the EnderSignal spawn
+        Player player = spawnLocation.getNearbyPlayers(1).stream()
+                .min(Comparator.comparingDouble(p -> p.getLocation().distance(spawnLocation)))
+                .orElse(null);
 
-        World world = event.getEntity().getWorld();
-        Player player = (Player) projectile.getShooter();
+        // Ensure that the responsible player could be inferred
+        if (player == null) return;
 
         // Determine which run this player participates in
         Optional<Speedrun> run = gameManager.getActiveRun(player);
@@ -105,11 +118,14 @@ public class WorldEventListener implements Listener {
 
         Speedrunner speedrunner = runner.get();
 
-        // Ensure the event was in the speedrun overworld
-        if (speedrunner.getWorldSet().getOverworld().getName().equals(world.getName())) return;
+        // Ensure the event was in their speedrun overworld
+        if (!speedrunner.getWorldSet().getOverworld().getName().equals(world.getName())) return;
+
+        // Build eye throw
+        EyeThrow eyeThrow = new EyeThrow(player, spawnLocation, targetLocation, System.currentTimeMillis());
 
         // Trigger triangulation
-        gameManager.assistedTriangulation(speedrunner, projectile);
+        gameManager.assistedTriangulation(speedrunner, eyeThrow);
     }
 }
 

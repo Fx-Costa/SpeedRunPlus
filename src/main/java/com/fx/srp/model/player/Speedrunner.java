@@ -7,16 +7,13 @@ import lombok.Setter;
 import org.apache.commons.lang.time.StopWatch;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,25 +62,9 @@ public class Speedrunner {
     /**
      * Add an eye of ender throw to the player's recorded throws - for assisted triangulation at 2 throws.
      */
-    public void addEyeThrow(Projectile projectile) {
-        // Get the eye's position and direction
-        Location position = player.getEyeLocation();
-        Vector direction = projectile.getVelocity().clone();
-        direction.setY(0);
-
-        // Ensure the direction is valid
-        if (direction.lengthSquared() == 0) return;
-
-        // Build an EyeThrow from the event
-        EyeThrow eyeThrow = new EyeThrow(
-                player,
-                new Location(position.getWorld(), position.getX(), 0, position.getZ()),
-                direction.normalize(),
-                System.currentTimeMillis()
-        );
-
+    public void addEyeThrow(EyeThrow eyeThrow) {
         // Cycle eye throws, keeping track of only the latest two throws
-        if (eyeThrows.size() >= 2) eyeThrows.removeFirst();
+        if (eyeThrows.size() >= 2) eyeThrows.remove(0);
         eyeThrows.add(eyeThrow);
     }
 

@@ -7,7 +7,6 @@ import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.util.triangulation.DeterministicTriangulation;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.util.Vector;
 
 import java.util.List;
@@ -24,13 +23,15 @@ public class TriangulationManager {
 
     private final ConfigHandler configHandler = ConfigHandler.getInstance();
 
-    public void assistedTriangulation(Speedrunner speedrunner, Projectile projectile) {
+    public void assistedTriangulation(Speedrunner speedrunner, EyeThrow eyeThrow) {
+        int initialEyeThrowCount = speedrunner.getEyeThrows().size();
+
+        // Record the eye throw
+        speedrunner.addEyeThrow(eyeThrow);
+
         Player player = speedrunner.getPlayer();
         List<EyeThrow> eyeThrows = speedrunner.getEyeThrows();
         int eyeThrowCount = eyeThrows.size();
-
-        // Record the eye throw
-        speedrunner.addEyeThrow(projectile);
 
         // Trigger feedback on the first eye throw
         if (eyeThrowCount < 2){
@@ -40,17 +41,12 @@ public class TriangulationManager {
             return;
         }
 
-        // Trigger triangulation on the second eye thrown and on any subsequent eye throw
-        if (eyeThrowCount == 2){
-            player.sendMessage(ChatColor.YELLOW + "2nd Eye of Ender thrown! Triangulating the stronghold...");
-        }
-        else {
-            player.sendMessage(ChatColor.YELLOW +
-                    "Another Eye of Ender thrown! Recalculating the stronghold location..."
-            );
+        // On throws after the second one
+        if (initialEyeThrowCount == 2){
+            player.sendMessage(ChatColor.YELLOW + "Recalculating the stronghold location...");
         }
 
-        // Perform triangulation
+        // Trigger triangulation on the second eye thrown and on any subsequent eye throw
         TriangulationResult triangulationResult = triangulate(eyeThrows);
 
         // On failed triangulation
@@ -63,13 +59,14 @@ public class TriangulationManager {
         Vector overworld = triangulationResult.getOverworld();
         Vector nether = triangulationResult.getNether();
         ChatColor green = ChatColor.GREEN;
-        String overworldMsg = String.format(
-                "Overworld -> X: %s %.1f, Z: %s %.1f", green, overworld.getX(), green, overworld.getZ()
+        ChatColor yellow = ChatColor.YELLOW;
+        String overworldMsg = String.format("    Overworld -> X: %s %.0f %s, Z: %s %.0f",
+                green, overworld.getX(), yellow, green, overworld.getZ()
         );
-        String netherMsg = String.format(
-                "Nether -> X: %s %.1f, Z: %s %.1f", green, nether.getX(), green, nether.getZ()
+        String netherMsg = String.format("    Nether -> X: %s %.0f %s, Z: %s %.0f",
+                green, nether.getX(), yellow, green, nether.getZ()
         );
-        player.sendMessage(ChatColor.YELLOW + "Stronghold located!\n" + overworldMsg + "\n" + netherMsg);
+        player.sendMessage(yellow + "Stronghold located:\n" + overworldMsg + "\n" + yellow + netherMsg);
     }
 
     private TriangulationResult triangulate(List<EyeThrow> eyeThrows){
