@@ -1,13 +1,17 @@
 package com.fx.srp.listeners;
 
 import com.fx.srp.managers.GameManager;
+import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
 import lombok.AllArgsConstructor;
-import org.bukkit.entity.EntityType;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 import java.util.Optional;
 
@@ -25,22 +29,30 @@ public class WorldEventListener implements Listener {
     private final GameManager gameManager;
 
     /**
-     * Handles {@link EntityDeathEvent} for the Ender Dragon.
+     * Handles {@link PlayerTeleportEvent} for determining when a run is completed.
      *
-     * <p>This allows speedruns that depend on killing the Ender Dragon to be
-     * automatically completed when the dragon dies.</p>
+     * <p>This ensures that teleport events in the end fountain triggers run completion</p>
      *
-     * @param event the entity death event triggered in the world
+     * @param event the player teleport event triggered in the speedrun end world
      */
-    @EventHandler
-    public void onDragonDeath(EntityDeathEvent event) {
-        if (event.getEntityType() != EntityType.ENDER_DRAGON) return;
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        Player player = event.getPlayer();
+        World world = event.getFrom().getWorld();
+        Block sourceBlock = event.getFrom().getBlock();
 
-        Player killer = event.getEntity().getKiller();
-        if (killer == null) return;
+        // Ensure the event was in the speedrun end world
+        Optional<Speedrunner> runner = gameManager.getSpeedrunner(player);
+        if (runner.isEmpty() || !runner.get().getWorldSet().getEnd().getName().equals(world.getName())) return;
+
+        // Cancel all teleport events in the speedrun end world
+        event.setCancelled(true);
+
+        // Ensure the event was fired from the end portal
+        if (!sourceBlock.getType().equals(Material.END_PORTAL)) return;
 
         // Determine which run this player participates in
-        Optional<Speedrun> run = gameManager.getActiveRun(killer);
+        Optional<Speedrun> run = gameManager.getActiveRun(player);
         if (run.isEmpty()) return; // Not in a speedrun
 
         Speedrun speedrun = run.get();
@@ -48,8 +60,6 @@ public class WorldEventListener implements Listener {
         // Only process if the run is actually running
         if (speedrun.getState() != Speedrun.State.RUNNING) return;
 
-        // Trigger completion logic on the run manager
-        gameManager.completeRun(speedrun, killer);
+        gameManager.completeRun(speedrun, player);
     }
 }
-
