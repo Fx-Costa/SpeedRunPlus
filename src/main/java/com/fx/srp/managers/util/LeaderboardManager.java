@@ -39,7 +39,8 @@ public class LeaderboardManager {
 
     private final File dataFile;
     private final List<RunEntry> leaderboard = new ArrayList<>();
-    private final List<PodiumEntry> currentPodium = new ArrayList<>();
+
+    private static final String PODIUM_TAG = "srp_podium";
 
     /**
      * Represents a completed run entry for the leaderboard.
@@ -61,17 +62,6 @@ public class LeaderboardManager {
             this.playerUUID = playerUUID;
             this.time = time;
         }
-    }
-
-    /**
-     * Represents a podium entry on the leaderboard.
-     * <p>
-     * Each entry contains the armor stands for displaying the player's head and their run time in the world.
-     */
-    private static final class PodiumEntry {
-        private ArmorStand headStand;
-        private ArmorStand nameStand;
-        private ArmorStand timeStand;
     }
 
     /**
@@ -194,12 +184,47 @@ public class LeaderboardManager {
     }
 
     private void clearPodium() {
-        for (PodiumEntry entry : currentPodium) {
-            removeIfExists(entry.headStand);
-            removeIfExists(entry.nameStand);
-            removeIfExists(entry.timeStand);
+        World world = configHandler.getPodiumWorld();
+        if (world == null) return;
+
+        // Remove the armor stands tagged with the podium tag from the podium world
+        world.getEntitiesByClass(ArmorStand.class).forEach(armorStand -> {
+            if (armorStand.getScoreboardTags().contains(PODIUM_TAG)) {
+                removeIfExists(armorStand);
+            }
+        });
+
+        // Remove any armor stands tagged with the old tags
+        // This is QOL only, and will be removed in the next major version release
+        clearPodiumLegacy();
+    }
+
+    @Deprecated(since="2.0.2", forRemoval=true)
+    private void clearPodiumLegacy() {
+        Set<String> LEGACY_PODIUM_TAGS = Set.of(
+                "spr_podium_head",
+                "spr_podium_name",
+                "spr_podium_time"
+        );
+
+        World world = configHandler.getPodiumWorld();
+
+        // Remove the armor stands tagged with the old/legacy podium tags from the podium world
+        int removalCount = 0;
+        for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
+            if (!Collections.disjoint(armorStand.getScoreboardTags(), LEGACY_PODIUM_TAGS)) {
+                logger.info("[SRP] Clearing legacy armorstand: " + armorStand.getLocation());
+                removeIfExists(armorStand);
+                removalCount++;
+            }
         }
-        currentPodium.clear();
+
+        if (removalCount > 0) {
+            logger.warning(
+                    "[SRP] Cleared " + removalCount + " legacy podium entries. Next major version release " +
+                    "will not support this feature. You must remove legacy podium entries using '/kill'."
+            );
+        }
     }
 
     private void removeIfExists(Entity entity) {
@@ -215,16 +240,9 @@ public class LeaderboardManager {
 
         ItemStack headItem = createHeadItem(run.playerUUID);
 
-        ArmorStand headStand = createHeadStand(world, headLoc, headItem);
-        ArmorStand nameStand = createNameStand(world, nameLoc, run.playerName);
-        ArmorStand timeStand = createTimeStand(world, timeLoc, run.time);
-
-
-        PodiumEntry entry = new PodiumEntry();
-        entry.headStand = headStand;
-        entry.nameStand = nameStand;
-        entry.timeStand = timeStand;
-        currentPodium.add(entry);
+        createHeadStand(world, headLoc, headItem);
+        createNameStand(world, nameLoc, run.playerName);
+        createTimeStand(world, timeLoc, run.time);
     }
 
     private ItemStack createHeadItem(UUID uuid) {
@@ -242,7 +260,7 @@ public class LeaderboardManager {
         return head;
     }
 
-    private ArmorStand createHeadStand(World world, Location loc, ItemStack head) {
+    private void createHeadStand(World world, Location loc, ItemStack head) {
         ArmorStand stand = spawnBaseStand(world, loc);
         stand.setRotation(180f, 0f);
 
@@ -251,27 +269,24 @@ public class LeaderboardManager {
             equipment.setHelmet(head);
         }
 
-        stand.addScoreboardTag("spr_podium_head");
-        return stand;
+        stand.addScoreboardTag(PODIUM_TAG);
     }
 
-    private ArmorStand createNameStand(World world, Location loc, String name) {
+    private void createNameStand(World world, Location loc, String name) {
         ArmorStand stand = spawnBaseStand(world, loc);
         stand.setCustomName(name);
         stand.setCustomNameVisible(true);
-        stand.addScoreboardTag("spr_podium_name");
+        stand.addScoreboardTag(PODIUM_TAG);
         stand.setRotation(180f, 0f);
-        return stand;
     }
 
-    private ArmorStand createTimeStand(World world, Location loc, long milliseconds) {
+    private void createTimeStand(World world, Location loc, long milliseconds) {
         ArmorStand stand = spawnBaseStand(world, loc);
         stand.setCustomName(
                 new TimeFormatter(milliseconds).withHours().withSuffixes().format()
         );
         stand.setCustomNameVisible(true);
-        stand.addScoreboardTag("spr_podium_time");
-        return stand;
+        stand.addScoreboardTag(PODIUM_TAG);
     }
 
     private ArmorStand spawnBaseStand(World world, Location loc) {
