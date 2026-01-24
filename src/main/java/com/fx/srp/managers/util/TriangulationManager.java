@@ -5,6 +5,7 @@ import com.fx.srp.model.EyeThrow;
 import com.fx.srp.model.TriangulationResult;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.util.triangulation.DeterministicTriangulation;
+import lombok.NoArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -19,11 +20,23 @@ import java.util.Locale;
  * triangulate the stronghold with various levels of assistance and variance.
  * <p>
  */
+@NoArgsConstructor
 public class TriangulationManager {
 
     private final ConfigHandler configHandler = ConfigHandler.getInstance();
 
+    /**
+     * Perform assisted triangulation.
+     *
+     * <p> Records each eye throw, and provides feedback to the player based on the amount of throws made. On the
+     * second eye throw, the stronghold coordinates in overworld and nether coordinates are given to the player.
+     * </p>
+     *
+     * @param speedrunner the speedrunner whose performing the triangulation
+     * @param eyeThrow  the {@code EyeThrow} with data on the ender eye
+     */
     public void assistedTriangulation(Speedrunner speedrunner, EyeThrow eyeThrow) {
+        int triangulationTriggerAmount = 2;
         int initialEyeThrowCount = speedrunner.getEyeThrows().size();
 
         // Record the eye throw
@@ -34,7 +47,7 @@ public class TriangulationManager {
         int eyeThrowCount = eyeThrows.size();
 
         // Trigger feedback on the first eye throw
-        if (eyeThrowCount < 2){
+        if (eyeThrowCount < triangulationTriggerAmount){
             player.sendMessage(ChatColor.YELLOW +
                     "1st Eye of Ender thrown! Throw another to triangulate the stronghold."
             );
@@ -42,7 +55,7 @@ public class TriangulationManager {
         }
 
         // On throws after the second one
-        if (initialEyeThrowCount == 2){
+        if (initialEyeThrowCount == triangulationTriggerAmount){
             player.sendMessage(ChatColor.YELLOW + "Recalculating the stronghold location...");
         }
 

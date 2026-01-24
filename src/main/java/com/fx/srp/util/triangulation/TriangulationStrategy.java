@@ -5,7 +5,20 @@ import com.fx.srp.model.TriangulationResult;
 
 import java.util.List;
 
+/**
+ * Represents a strategy for triangulating the location of a stronghold
+ * based on Eye of Ender throws.
+ *
+ * <p>Implementations of this interface define the algorithm used to
+ * calculate the stronghold position from a set of {@link EyeThrow} objects.
+ * Different strategies may provide varying levels of assistance, determinism,
+ * or variance.</p>
+ *
+ * <p>All triangulation calculations are performed in the XZ plane (horizontal),
+ * as Eye of Ender Y coordinates are generally ignored for triangulation purposes.</p>
+ */
 public interface TriangulationStrategy {
+
     /**
      * Triangulate a stronghold location based on eye throws.
      *

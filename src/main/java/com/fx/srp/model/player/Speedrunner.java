@@ -64,7 +64,8 @@ public class Speedrunner {
      */
     public void addEyeThrow(EyeThrow eyeThrow) {
         // Cycle eye throws, keeping track of only the latest two throws
-        if (eyeThrows.size() >= 2) eyeThrows.remove(0);
+        int maximumEyeCount = 2;
+        if (eyeThrows.size() >= maximumEyeCount) eyeThrows.remove(0);
         eyeThrows.add(eyeThrow);
     }
 

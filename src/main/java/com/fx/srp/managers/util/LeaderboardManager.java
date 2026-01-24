@@ -201,7 +201,7 @@ public class LeaderboardManager {
 
     @Deprecated(since="2.0.2", forRemoval=true)
     private void clearPodiumLegacy() {
-        Set<String> LEGACY_PODIUM_TAGS = Set.of(
+        Set<String> legacyPodiumTags = Set.of(
                 "spr_podium_head",
                 "spr_podium_name",
                 "spr_podium_time"
@@ -212,7 +212,7 @@ public class LeaderboardManager {
         // Remove the armor stands tagged with the old/legacy podium tags from the podium world
         int removalCount = 0;
         for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
-            if (!Collections.disjoint(armorStand.getScoreboardTags(), LEGACY_PODIUM_TAGS)) {
+            if (!Collections.disjoint(armorStand.getScoreboardTags(), legacyPodiumTags)) {
                 logger.info("[SRP] Clearing legacy armorstand: " + armorStand.getLocation());
                 removeIfExists(armorStand);
                 removalCount++;

@@ -187,11 +187,13 @@ public class SeedManager {
      * @param sender   the {@code CommandSender} responsible for adding the seed
      */
     public void addSeedAsync(SeedCategory.SeedType seedType, int amount, CommandSender sender) {
-        if (amount < 1) {
+        int minimumAmount = 1;
+        if (amount < minimumAmount) {
             sender.sendMessage(Color.RED + "The amount must be greater than 0!");
             return;
         }
-        if (amount > 10) {
+        int maximumAmount = 10;
+        if (amount > maximumAmount) {
             sender.sendMessage(Color.RED + "The amount must be less than 10!");
             return;
         }

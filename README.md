@@ -135,12 +135,26 @@ main-end: world_the_end
 # Game rule settings
 game-rules:
 
+  # Assisted triangulation
+  assisted-triangulation:
+
+    # Whether to use assisted triangulation
+    use-assisted-triangulation: true
+
+    # The triangulation strategy - specifies the triangulation algorithm and thereby the level of assistance and
+    # variance during the assisted triangulation
+    strategy: DETERMINISTIC
+
   # Speedrun world seeds
   filtered-seeds:
-    # Whether to use filtered seeds or rely on random seeds
-    use-filtered-seeds: false
 
-    # Weights for each type of seed (higher number = more likely to appear) (non-positive weights excludes the type)
+    # Whether to use filtered seeds or rely on random seeds
+    use-filtered-seeds: true
+
+    # Filtered seeds API
+    filtered-seeds-api: https://filteredseed.com/getRandomUsedSeed/
+
+    # Weights for each type of seed (higher number = more likely to appear)
     weights:
       MAPLESS: 0
       VILLAGE: 3
@@ -168,23 +182,50 @@ world-prefix:
 
 # Timer settings
 timer:
+
   # The amount of time to countdown from, when starting a speedrun in seconds
   countdown-seconds: 10
 
-# Podium configuration
-# Use it to display the top N contestants and their times in the main world using armor-stands and player heads
+# Podium configuration (solo runs exclusively)
 podium:
-  max: 10
+
+  # Maximum number of leaderboard entries to display on the podium
+  max: 5
+
+  # The world in which the following positions are used as the podium
   world: world
+
+  # The positions in the above world where the leaderboard entries are created as the podium
   positions:
     1:
-      x: 0.5
-      y: 80.5
-      z: 0.5
-      yaw: 90
+      x: 256.5
+      y: 65.5
+      z: 183.5
+      yaw: 180
+    2:
+      x: 254.5
+      y: 64.5
+      z: 182.5
+      yaw: 180
+    3:
+      x: 258.5
+      y: 64.5
+      z: 182.5
+      yaw: 180
+    4:
+      x: 260.5
+      y: 63.5
+      z: 181.5
+      yaw: 180
+    5:
+      x: 104.5
+      y: 63.5
+      z: 181.5
+      yaw: 180
 
 # AFK configuration
 afk:
+
   # Minutes before ending a speedrun due to inactivity
   timeout-minutes: 5
 
