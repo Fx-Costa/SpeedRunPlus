@@ -53,11 +53,11 @@ public class WorldEventListener implements Listener {
         Optional<Speedrunner> runner = gameManager.getSpeedrunner(player);
         if (runner.isEmpty() || !runner.get().getWorldSet().getEnd().getName().equals(world.getName())) return;
 
-        // Cancel all teleport events in the speedrun end world
-        event.setCancelled(true);
-
         // Ensure the event was fired from the end portal
         if (!sourceBlock.getType().equals(Material.END_PORTAL)) return;
+
+        // Cancel the teleport event
+        event.setCancelled(true);
 
         // Determine which run this player participates in
         Optional<Speedrun> run = gameManager.getActiveRun(player);
