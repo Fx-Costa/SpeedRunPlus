@@ -122,6 +122,15 @@ public class CommandRegistry {
                         .handler(ctx -> gameManager.sendHelpMessage(ctx.getSender()))
         );
 
+        // Register assisted triangulation reset command
+        commandManager.command(
+                commandManager.commandBuilder(BASE_COMMAND)
+                        .literal("triangulation")
+                        .literal("reset")
+                        .permission(usagePermission)
+                        .handler(ctx -> gameManager.resetTriangulation(ctx.getSender()))
+        );
+
         // Register admin commands
         registerAdminCommands(commandManager, gameManager);
     }

@@ -2,8 +2,12 @@ package com.fx.srp.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
+
+import java.util.UUID;
 
 /**
  * Represents a single throw of an Eye of Ender by a player.
@@ -19,6 +23,8 @@ import org.bukkit.entity.Player;
 @AllArgsConstructor
 public class EyeThrow {
 
+    private final UUID uuid;
+
     private final Player player;
 
     private final Location spawnLocation;
@@ -26,5 +32,13 @@ public class EyeThrow {
     private final Location targetLocation;
 
     private final long timestamp;
+
+    @Setter
+    private Location playerPosition;
+
+    @Setter
+    private Vector playerViewDirection;
+
+    private final boolean willDrop;
 
 }

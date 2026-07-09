@@ -17,15 +17,18 @@ import org.bukkit.util.Vector;
 public class TriangulationResult {
     private final Vector overworld;
     private final Vector nether;
+    private final Double confidence;
 
     /**
      * Constructs a TriangulationResult from an Overworld location.
      *
      * @param overworld the calculated stronghold location in the Overworld as a {@code Vector}
+     * @param confidence the calculated confidence as a percentage
      */
-    public TriangulationResult(Vector overworld) {
+    public TriangulationResult(Vector overworld, Double confidence) {
         double scale = 8.0;
         this.overworld = overworld;
         this.nether = new Vector(overworld.getX() / scale, overworld.getY(), overworld.getZ() / scale);
+        this.confidence = confidence;
     }
 }

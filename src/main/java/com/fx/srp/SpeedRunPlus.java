@@ -58,9 +58,9 @@ public class SpeedRunPlus extends JavaPlugin {
         registerListeners();
 
         // Plugin server console banner
-        String version = getDescription().getVersion();
         String reset = "\u001B[0m";
         String yellow = "\u001B[33m";
+        String version = getDescription().getVersion();
         logger.info("");
         logger.info(yellow + "   ____                _____              __ " + reset);
         logger.info(yellow + "  / __/__  ___ ___ ___/ / _ \\__ _____  __/ /_" + reset);
