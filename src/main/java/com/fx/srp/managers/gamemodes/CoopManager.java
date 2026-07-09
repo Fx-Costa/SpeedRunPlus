@@ -3,113 +3,165 @@ package com.fx.srp.managers.gamemodes;
 import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.managers.util.WorldManager;
+import com.fx.srp.model.party.MultiplayerParty;
 import com.fx.srp.model.player.Speedrunner;
-import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.model.run.CoopSpeedrun;
+import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.util.time.TimeFormatter;
 import com.fx.srp.commands.GameMode;
 import lombok.NonNull;
 import org.apache.commons.lang.time.StopWatch;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Manager responsible for handling all aspects of the Coop game mode (cooperative speedruns).
  *
  * <p>Responsibilities include:</p>
  * <ul>
- *     <li>Tracking pending coop requests and enforcing timeouts</li>
- *     <li>Starting and stopping {@link CoopSpeedrun} instances</li>
+ *     <li>Tracking pending coop requests and enforcing timeouts (inherited)</li>
+ *     <li>Accumulating accepted invitees into a forming {@link MultiplayerParty}</li>
+ *     <li>Starting and stopping {@link CoopSpeedrun} instances once the leader finalizes the party</li>
  * </ul>
  */
 public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
 
-    /**
-     * Constructs a new CoopManager.
-     *
-     * @param plugin the main {@link SpeedRunPlus} plugin instance
-     * @param gameManager the {@link GameManager} for run registration and player management
-     * @param worldManager the {@link WorldManager} for creating and deleting worlds
-     */
+    /** Parties currently forming, keyed by leader UUID. */
+    private final Map<UUID, MultiplayerParty> formingParties = new ConcurrentHashMap<>();
+
+    /** Reverse lookup: member UUID -> leader UUID, for anyone currently in a forming party. */
+    private final Map<UUID, UUID> leaderByMember = new ConcurrentHashMap<>();
+
     public CoopManager(SpeedRunPlus plugin, GameManager gameManager, WorldManager worldManager) {
         super(plugin, gameManager, worldManager);
     }
 
     /* ==========================================================
-     *                       ACCEPT COOP
+     *                    ACCEPT (JOIN PARTY)
      * ========================================================== */
     /**
-     * Accepts a pending coop request and starts a {@link CoopSpeedrun}.
+     * Accepts a pending coop invite, adding the accepting player to the sender's (leader's)
+     * forming party. Does not start the run — the leader must separately run
+     * {@code /srp coop start} once the party is ready.
      *
-     * <p>Sets up a shared {@link StopWatch}, captures player states, and more.</p>
-     *
-     * @param partner the player accepting the request
+     * @param target the player accepting the invite
      */
     @Override
-    public void start(Player partner) {
-        Player leader = getRequestSender(partner);
+    public void accept(Player target) {
+        Player leader = getRequestSender(target);
         if (leader == null) return;
 
-        // Setup stopwatch
+        UUID leaderUUID = leader.getUniqueId();
+        UUID targetUUID = target.getUniqueId();
+
+        MultiplayerParty party = formingParties.computeIfAbsent(leaderUUID, MultiplayerParty::new);
+
+        // Check the number of available slots for a party
+        int maxPartySize = configHandler.getMaxPartySize();
+        int availableSlots = configHandler.getMaxPlayers() - gameManager.getAllPlayersInRuns().size();
+        if (availableSlots <= 0) {
+            target.sendMessage(ChatColor.RED + "The server is full of speedrunners right now! Try again later!");
+            return;
+        }
+
+        // Verify that the party has open slots
+        int maxSize = maxPartySize > 0 ? Math.min(maxPartySize, availableSlots) : availableSlots;
+        if (party.size() >= maxSize) {
+            target.sendMessage(ChatColor.RED + "That party is already full!");
+            return;
+        }
+
+        party.addMember(targetUUID);
+        leaderByMember.put(targetUUID, leaderUUID);
+
+        leader.sendMessage(ChatColor.GREEN + target.getName() + " joined your party! ("
+                + party.size() + "/" + maxSize + ")");
+        target.sendMessage(ChatColor.GREEN + "You joined " + leader.getName() + "'s coop party!");
+        leader.sendMessage(ChatColor.YELLOW +
+                "Invite with /srp coop request <player>, or run /srp coop start when ready.");
+    }
+
+    /* ==========================================================
+     *                  START (LEADER BEGINS RUN)
+     * ========================================================== */
+    /**
+     * Called by a party leader to finalize their forming party and begin the {@link CoopSpeedrun}.
+     *
+     * <p>Sets up a shared {@link StopWatch}, captures each participant's state, creates a single
+     * shared world set, and starts the countdown for all party members.</p>
+     *
+     * @param leader the player starting the run; must be the leader of a forming party of size >= 2
+     */
+    @Override
+    public void start(Player leader) {
+        UUID leaderUUID = leader.getUniqueId();
+
+        if (!formingParties.containsKey(leaderUUID)) {
+            if (leaderByMember.containsKey(leaderUUID)) {
+                leader.sendMessage(ChatColor.RED + "Only the party leader can start the run!");
+            } else {
+                leader.sendMessage(ChatColor.RED + "You don't have a party! Invite someone with /srp coop request <player>.");
+            }
+            return;
+        }
+
+        MultiplayerParty party = formingParties.get(leaderUUID);
+        if (party.size() < 2) {
+            leader.sendMessage(ChatColor.RED + "You need at least one other player in your party first!");
+            return;
+        }
+
+        formingParties.remove(leaderUUID);
+        party.getMemberUUIDs().forEach(leaderByMember::remove);
+
         StopWatch stopWatch = new StopWatch();
-        Speedrunner leaderSpeedrunner = new Speedrunner(leader, stopWatch);
-        Speedrunner partnerSpeedrunner = new Speedrunner(partner, stopWatch);
+        List<Speedrunner> speedrunners = party.getMemberUUIDs().stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull) // member disconnected between accept and start
+                .map(p -> new Speedrunner(p, stopWatch))
+                .peek(Speedrunner::captureState)
+                .collect(Collectors.toList());
 
-        // Capture the players' state - their inventory, levels, etc.
-        leaderSpeedrunner.captureState();
-        partnerSpeedrunner.captureState();
+        if (speedrunners.size() < 2) {
+            leader.sendMessage(ChatColor.RED + "Not enough party members are still online to start!");
+            return;
+        }
 
-        CoopSpeedrun coopSpeedrun = new CoopSpeedrun(
-                GameMode.COOP,
-                leaderSpeedrunner,
-                partnerSpeedrunner,
-                stopWatch,
-                null
-        );
+        CoopSpeedrun coopSpeedrun = new CoopSpeedrun(GameMode.COOP, speedrunners, stopWatch, null);
         gameManager.registerRun(coopSpeedrun);
-
         initializeRun(coopSpeedrun);
 
-        leader.sendMessage(ChatColor.YELLOW + "Creating the world...");
-        partner.sendMessage(ChatColor.YELLOW + "Creating the world...");
+        List<Player> players = speedrunners.stream().map(Speedrunner::getPlayer).collect(Collectors.toList());
+        players.forEach(p -> p.sendMessage(ChatColor.YELLOW + "Creating the world..."));
+
         worldManager.createWorldsForPlayers(List.of(leader), null, sets -> {
-            // Get the set of worlds (overworld, nether, end) for each of the two players
-            WorldManager.WorldSet leaderWorldSet = sets.get(leader.getUniqueId());
+            WorldManager.WorldSet worldSet = sets.get(leaderUUID);
+            coopSpeedrun.setSeed(worldSet.getOverworld().getSeed());
 
-            // Assign them the world sets and set the shared seed
-            leaderSpeedrunner.setWorldSet(leaderWorldSet);
-            partnerSpeedrunner.setWorldSet(leaderWorldSet);
-            coopSpeedrun.setSeed(leaderWorldSet.getOverworld().getSeed());
+            speedrunners.forEach(sr -> {
+                sr.setWorldSet(worldSet);
+                sr.freeze();
+            });
 
-            // Freeze the players
-            leaderSpeedrunner.freeze();
-            partnerSpeedrunner.freeze();
+            players.forEach(p -> p.teleport(worldSet.getSpawn()));
+            speedrunners.forEach(Speedrunner::resetState);
 
-            // Teleport players
-            leader.teleport(leaderSpeedrunner.getWorldSet().getSpawn());
-            partner.teleport(partnerSpeedrunner.getWorldSet().getSpawn());
-
-            // Reset players' state (health, hunger, inventory, etc.)
-            leaderSpeedrunner.resetState();
-            partnerSpeedrunner.resetState();
-
-            startCountdown(coopSpeedrun, List.of(leaderSpeedrunner, partnerSpeedrunner));
+            startCountdown(coopSpeedrun, speedrunners);
         });
     }
 
     /* ==========================================================
      *                       RESET COOP
      * ========================================================== */
-    /**
-     * Resets the worlds and state of a player in a {@link CoopSpeedrun}.
-     *
-     * <p>Does nothing.</p>
-     *
-     * @param player the player requesting the reset
-     */
     @Override
     public void reset(Player player) {
         // Does nothing
@@ -118,14 +170,6 @@ public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
     /* ==========================================================
      *                       STOP COOP
      * ========================================================== */
-    /**
-     * Stops a {@link CoopSpeedrun}, showing results to both players.
-     *
-     * <p>Displays titles with winner information and formatted run time.
-     * Calls {@link GameModeManager#finishRun} for cleanup.</p>
-     *
-     * @param winner any non-null Player declares all as winners
-     */
     @Override
     public void stop(@NonNull Player winner) {
         // If not already in a speedrun
@@ -141,34 +185,54 @@ public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
         // Update the state
         coopSpeedrun.setState(Speedrun.State.FINISHED);
 
-        // Get the players
-        Player leader = coopSpeedrun.getLeader().getPlayer();
-        Player partner = coopSpeedrun.getPartner().getPlayer();
-
-        // Get the final time
         String formattedTime = new TimeFormatter(coopSpeedrun.getStopWatch())
                 .withHours()
                 .withSuperscriptMs()
                 .format();
 
-        // Announce winners
-        leader.sendTitle(
+        coopSpeedrun.getSpeedrunners().forEach(sr -> sr.getPlayer().sendTitle(
                 ChatColor.GREEN + "You won! ",
-                ChatColor.GREEN + "With a time of: " +
-                        ChatColor.ITALIC + ChatColor.GRAY + formattedTime,
-                10,
-                140,
-                20
-        );
-        partner.sendTitle(
-                ChatColor.GREEN + "You won! ",
-                ChatColor.GREEN + "With a time of: " +
-                        ChatColor.ITALIC + ChatColor.GRAY + formattedTime,
-                10,
-                140,
-                20
-        );
+                ChatColor.GREEN + "With a time of: " + ChatColor.ITALIC + ChatColor.GRAY + formattedTime,
+                10, 140, 20
+        ));
 
         finishRun(coopSpeedrun, 200);
+    }
+
+    @Override
+    public void handlePlayerQuit(Player player) {
+        super.handlePlayerQuit(player); // handles any pending single invite
+
+        UUID uuid = player.getUniqueId();
+
+        // Player was leading a forming party -> disband it
+        MultiplayerParty asLeader = formingParties.remove(uuid);
+        if (asLeader != null) {
+            asLeader.getMemberUUIDs().stream()
+                    .filter(memberUUID -> !memberUUID.equals(uuid))
+                    .forEach(memberUUID -> {
+                        leaderByMember.remove(memberUUID);
+                        Player member = Bukkit.getPlayer(memberUUID);
+                        if (member != null) {
+                            member.sendMessage(ChatColor.YELLOW + "Your party leader disconnected;" +
+                                    " the party has been disbanded.");
+                        }
+                    });
+            return;
+        }
+
+        // Player was a member of someone else's forming party -> just remove them
+        UUID leaderUUID = leaderByMember.remove(uuid);
+        if (leaderUUID != null) {
+            MultiplayerParty party = formingParties.get(leaderUUID);
+            if (party != null) {
+                party.removeMember(uuid);
+                Player leader = Bukkit.getPlayer(leaderUUID);
+                if (leader != null) {
+                    leader.sendMessage(ChatColor.YELLOW + player.getName() + " disconnected and" +
+                            " left your party. (" + party.size() + ")");
+                }
+            }
+        }
     }
 }

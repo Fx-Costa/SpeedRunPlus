@@ -61,6 +61,7 @@ public final class ConfigHandler {
 
     // Game rules
     @Getter private int maxPlayers;
+    @Getter private int maxPartySize;
     @Getter private long maxRunTime;
     @Getter private long maxRequestTime;
     @Getter private boolean assistedTriangulation;
@@ -151,6 +152,7 @@ public final class ConfigHandler {
 
     private void loadGameRules() {
         maxPlayers = config.getInt("game-rules.max-players", 4);
+        maxPartySize = config.getInt("game-rules.max-party-size", 4);
         maxRunTime = config.getLong("game-rules.max-time-minutes", 30) * 60 * 1000;
         maxRequestTime = config.getLong("game-rules.max-request-seconds", 30) * 1000;
         filteredSeeds = config.getBoolean("game-rules.filtered-seeds.use-filtered-seeds", false);

@@ -19,7 +19,7 @@ public enum GameMode {
     // Multiplayer coop speedrun
     COOP(
             // All actions (subcommands) for the coop game mode
-            EnumSet.of(Action.REQUEST, Action.ACCEPT, Action.DECLINE, Action.STOP),
+            EnumSet.of(Action.REQUEST, Action.ACCEPT, Action.DECLINE, Action.START, Action.STOP),
 
             // All commands allowed during a coop speedrun
             EnumSet.of(Action.STOP)

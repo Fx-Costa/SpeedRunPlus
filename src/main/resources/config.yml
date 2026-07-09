@@ -45,6 +45,10 @@ game-rules:
   # Used it to limit the toll on the server's resources
   max-players: 4
 
+  # Maximum number of players allowed in a single multiplayer game mode party
+  # May never exceed 'max-players'
+  max-party-size: 4
+
   # Maximum duration of a speedrun in minutes
   # Use it to limit the time a player can spend in a single run
   max-time-minutes: 120

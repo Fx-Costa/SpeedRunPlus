@@ -3,78 +3,63 @@ package com.fx.srp.model.run;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.util.ui.TimerUtil;
 import com.fx.srp.commands.GameMode;
-import lombok.Getter;
 import org.apache.commons.lang.time.StopWatch;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Represents a coop speedrun with two players: a party leader and a partner.
+ * Represents a coop speedrun shared between two or more players on a single world set
+ * and stopwatch.
  * <p>
- * Extends {@link Speedrun} and provides logic for managing a two-player competitive run.
+ * Extends {@link Speedrun} and provides logic for managing a cooperative run between any
+ * number of participants.
  * </p>
  */
 public class CoopSpeedrun extends Speedrun {
 
-    @Getter
-    private final Speedrunner leader;
-
-    @Getter
-    private final Speedrunner partner;
+    private final List<Speedrunner> speedrunners;
 
     /**
      * Constructs a new {@code CoopSpeedrun}.
      *
-     * @param gameMode the {@code GameMode} that the run represents
-     * @param leader      The {@code Speedrunner} who initiated the coop speedrun.
-     * @param partner     The {@code Speedrunner} who was invited.
-     * @param stopWatch   The {@code StopWatch} instance to track elapsed time.
-     * @param seed        Optional seed for world generation. May be {@code null}.
+     * @param gameMode     the {@code GameMode} that the run represents
+     * @param speedrunners the participants in this coop speedrun; by contract, the first
+     *                     entry is the party leader (see {@link #getLeader()})
+     * @param stopWatch    the {@code StopWatch} instance to track elapsed time
+     * @param seed         optional seed for world generation. May be {@code null}
      */
     public CoopSpeedrun(GameMode gameMode,
-                        Speedrunner leader,
-                        Speedrunner partner,
+                        List<Speedrunner> speedrunners,
                         StopWatch stopWatch,
                         Long seed
     ) {
-        super(gameMode, leader, stopWatch, seed);
-        this.leader = leader;
-        this.partner = partner;
+        super(gameMode, speedrunners.get(0), stopWatch, seed);
+        this.speedrunners = List.copyOf(speedrunners);
     }
 
-    /**
-     * Initializes timers for both participants of the coop run.
-     * <p>
-     * Uses {@link TimerUtil#createTimer(List, StopWatch)} to create a shared timer HUD for both players.
-     * </p>
-     */
+    /** The party leader — always {@code speedrunners.get(0)} by construction. */
+    public Speedrunner getLeader() {
+        return speedrunners.get(0);
+    }
+
     @Override
     public void initializeTimers() {
-        TimerUtil.createTimer(List.of(leader.getPlayer(), partner.getPlayer()), getStopWatch());
+        TimerUtil.createTimer(
+                speedrunners.stream().map(Speedrunner::getPlayer).collect(Collectors.toList()),
+                getStopWatch()
+        );
     }
 
-    /**
-     * Returns a list of all speedrunners participating in this coop run.
-     *
-     * @return a {@code List<Speedrunner>} containing {@code leader} and {@code partner}.
-     */
     @Override
     public List<Speedrunner> getSpeedrunners() {
-        return List.of(leader, partner);
+        return speedrunners;
     }
 
-    /**
-     * Called when a player leaves the server during this coop run.
-     * <p>
-     * Automatically ends the coop run and declares no winners.
-     * </p>
-     *
-     * @param leaver The {@code Player} who left the server.
-     */
     @Override
     public void onPlayerLeave(Player leaver) {
-        // No winners
-        gameMode.getManager().abort(this, null, "Your partner has left the game!");
+        // Whole run ends if any participant disconnects
+        gameMode.getManager().abort(this, null, "A teammate has left the game!");
     }
 }

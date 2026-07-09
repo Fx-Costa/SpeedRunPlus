@@ -239,4 +239,39 @@ public abstract class MultiplayerGameModeManager<T extends Speedrun>
 
         return sender;
     }
+
+    /**
+     * Cleans up any pending request involving the given player: an inbound request they had
+     * not yet responded to, or an outbound request they had sent that hasn't been accepted,
+     * declined, or timed out yet.
+     * <p>
+     * Subclasses that track additional pre-run multiplayer state (e.g. a forming party) should
+     * override this and call {@code super.handlePlayerQuit(player)}.
+     *
+     * @param player the player who disconnected
+     */
+    public void handlePlayerQuit(Player player) {
+        UUID uuid = player.getUniqueId();
+
+        // Player was the target of a pending request
+        PendingRequest inbound = pendingRequests.remove(uuid);
+        if (inbound != null) {
+            if (inbound.getTimeoutTaskId() > 0) Bukkit.getScheduler().cancelTask(inbound.getTimeoutTaskId());
+            Player sender = Bukkit.getPlayer(inbound.getPlayerUUID());
+            if (sender != null) {
+                sender.sendMessage(ChatColor.YELLOW + player.getName() + " disconnected; your request has been cancelled.");
+            }
+        }
+
+        // Player was the sender of one or more pending requests
+        pendingRequests.entrySet().removeIf(entry -> {
+            if (!entry.getValue().isByPlayer(uuid)) return false;
+            if (entry.getValue().getTimeoutTaskId() > 0) Bukkit.getScheduler().cancelTask(entry.getValue().getTimeoutTaskId());
+            Player target = Bukkit.getPlayer(entry.getKey());
+            if (target != null) {
+                target.sendMessage(ChatColor.YELLOW + player.getName() + " disconnected; their request to you was cancelled.");
+            }
+            return true;
+        });
+    }
 }

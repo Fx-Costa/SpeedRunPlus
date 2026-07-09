@@ -310,6 +310,12 @@ public class GameManager {
      */
     public void handlePlayerQuit(Player player) {
         getActiveRun(player).ifPresent(run -> run.onPlayerLeave(player));
+
+        for (GameMode gameMode : GameMode.values()) {
+            gameMode.getManager()
+                    .asMultiplayerManager()
+                    .ifPresent(manager -> manager.handlePlayerQuit(player));
+        }
     }
 
     /**
