@@ -24,6 +24,10 @@ on:
           - 1.0.0
           - 1.0.0-SNAPSHOT
           - 0.0.0
+      deploy:
+        description: Deploy to server
+        type: boolean
+        default: false
       publish-modrinth:
         description: Publish to Modrinth
         type: boolean
@@ -58,6 +62,7 @@ jobs:
 
       # Deploy via SFTP
       - name: Deploy via SFTP
+        if: ${{ github.event.inputs.deploy == 'true' }}
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           username: ${{ secrets.SFTP_USERNAME }}
