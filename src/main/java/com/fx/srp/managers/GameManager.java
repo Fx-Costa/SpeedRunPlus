@@ -10,7 +10,6 @@ import com.fx.srp.managers.util.LeaderboardManager;
 import com.fx.srp.managers.util.SeedManager;
 import com.fx.srp.managers.util.TriangulationManager;
 import com.fx.srp.managers.util.WorldManager;
-import com.fx.srp.model.EyeThrow;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
 import com.fx.srp.model.run.SoloSpeedrun;
@@ -20,7 +19,9 @@ import com.fx.srp.model.seed.SeedCategory;
 import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EnderSignal;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -53,6 +54,7 @@ public class GameManager {
     private final CoopManager coopManager;
 
     // Utilities
+    private final WorldManager worldManager;
     private final SeedManager seedManager;
     private final AfkManager afkManager;
     private final LeaderboardManager leaderboardManager;
@@ -70,7 +72,7 @@ public class GameManager {
         this.leaderboardManager = new LeaderboardManager(plugin);
         this.seedManager = new SeedManager(plugin);
         this.triangulationManager = new TriangulationManager();
-        WorldManager worldManager = new WorldManager(plugin, seedManager);
+        this.worldManager = new WorldManager(plugin, seedManager);
 
         // Game mode managers
         this.soloManager = new SoloManager(plugin, this, worldManager);
@@ -95,6 +97,18 @@ public class GameManager {
     public Optional<Speedrun> getActiveRun(Player player) {
         if (player == null) return Optional.empty();
         return Optional.ofNullable(runRegistry.getActiveRun(player.getUniqueId()));
+    }
+
+    /**
+     * Retrieves the {@link Speedrun} based on a world.
+     *
+     * @param world the world
+     * @return an {@link Optional} containing the {@link Speedrun}, or empty if no active run
+     */
+    public Optional<Speedrun> getActiveRun(World world){
+        return worldManager.getWorldOwnerUUID(world)
+                .map(Bukkit::getPlayer)
+                .flatMap(this::getActiveRun);
     }
 
     /**
@@ -229,15 +243,29 @@ public class GameManager {
                 .findFirst());
     }
 
+    /**
+     * Get the speedrunner responsible for throwing an eye of ender in a given world
+     */
+    public Optional<Speedrunner> getEyeThrower(EnderSignal enderSignal) {
+        return getActiveRun(enderSignal.getWorld())
+                .map(Speedrun::getSpeedrunners)
+                .stream()
+                .flatMap(List::stream)
+                .filter(sr -> sr.getEyeThrows().stream()
+                        .anyMatch(eyeThrow -> eyeThrow.getUuid().equals(enderSignal.getUniqueId()))
+                )
+                .findFirst();
+    }
+
     /* ==========================================================
      *                    Event management
      * ========================================================== */
     /**
-     * Assisted triangulation
+     * Try performing assisted triangulation
      */
-    public void assistedTriangulation(Speedrunner speedrunner, EyeThrow eyeThrow) {
-        // Perform the assisted triangulation
-        triangulationManager.assistedTriangulation(speedrunner, eyeThrow);
+    public void tryTriangulation(Speedrunner speedrunner) {
+        // Try performing the assisted triangulation
+        triangulationManager.tryTriangulation(speedrunner);
     }
 
     /**
@@ -314,6 +342,23 @@ public class GameManager {
     /* ==========================================================
      *                     Utilities
      * ========================================================== */
+    /**
+     * Send a help message based on the number of eyes thrown
+     */
+    public void sendTriangulationHelpMessage(Speedrunner speedrunner) {
+        if (speedrunner.getEyeThrows().size() == 1) triangulationManager.sendFirstEyeMessage(speedrunner);
+        if (speedrunner.getEyeThrows().size() > 2) triangulationManager.sendRecalculationMessage(speedrunner);
+    }
+
+    /**
+     * Restart a player's assisted triangulation, if enabled
+     */
+    public void resetTriangulation(CommandSender sender) {
+        if (!(sender instanceof Player)) return;
+
+        getSpeedrunner((Player) sender).ifPresent(triangulationManager::resetTriangulation);
+    }
+
     /**
      * Unload the podium
      */

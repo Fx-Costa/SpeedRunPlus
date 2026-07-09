@@ -1,5 +1,6 @@
 package com.fx.srp.listeners;
 
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.managers.GameManager;
 import com.fx.srp.model.EyeThrow;
@@ -18,8 +19,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
-import java.util.Comparator;
 import java.util.Optional;
+import java.util.Locale;
+import java.util.Comparator;
 
 /**
  * Listens for world-related events relevant to SRP gameplay and delegates
@@ -72,26 +74,23 @@ public class WorldEventListener implements Listener {
     }
 
     /**
-     * Handles {@link EntitySpawnEvent} for assisted triangulation.
+     * Handles {@link EntitySpawnEvent} of ender eye spawns, tracking their context for assisted triangulation.
      *
-     * <p>Ensures that when an ender signal is spawned in the speedrun overworld, assisted triangulation is triggered.
-     * </p>
+     * <p>Ensures that when an ender signal is spawned in the speedrun overworld, its context is tracked. </p>
+     * <p>Triggers assisted triangulation if enabled. </p>
      *
      * @param event the ender signal spawn event triggered by an ender eye throw in the speedrun overworld
      */
     @EventHandler
     public void onEyeThrow(EntitySpawnEvent event) {
         // Ensure the event is caused by an ender signal spawning
-        if (!(event.getEntity() instanceof EnderSignal)) {
-            return;
-        }
+        if (!(event.getEntity() instanceof EnderSignal)) return;
 
         // Only if assisted triangulation is enabled
         if (!configHandler.isAssistedTriangulation()) return;
 
         // Ender signal info and flight data
         EnderSignal eye = (EnderSignal) event.getEntity();
-        World world = eye.getWorld();
         Location spawnLocation = eye.getLocation();
         Location targetLocation = eye.getTargetLocation();
 
@@ -119,13 +118,77 @@ public class WorldEventListener implements Listener {
         Speedrunner speedrunner = runner.get();
 
         // Ensure the event was in their speedrun overworld
+        World world = eye.getWorld();
         if (!speedrunner.getWorldSet().getOverworld().getName().equals(world.getName())) return;
 
         // Build eye throw
-        EyeThrow eyeThrow = new EyeThrow(player, spawnLocation, targetLocation, System.currentTimeMillis());
+        EyeThrow eyeThrow = new EyeThrow(
+                eye.getUniqueId(),
+                player,
+                spawnLocation,
+                targetLocation,
+                System.currentTimeMillis(),
+                null,   // This is later set based on a different event if needed
+                null,   // This is later set based on a different event if needed
+                eye.getDropItem()
+        );
 
-        // Trigger triangulation
-        gameManager.assistedTriangulation(speedrunner, eyeThrow);
+        // Add it to the player's tracked eyes
+        speedrunner.addEyeThrow(eyeThrow);
+
+        // Send help message, if applicable
+        gameManager.sendTriangulationHelpMessage(speedrunner);
+
+        // Try triangulation (will only succeed if strategy + data allows it)
+        gameManager.tryTriangulation(speedrunner);
+    }
+
+    /**
+     * Handles {@link EntityRemoveFromWorldEvent} for assisted (PROBABILISTIC) triangulation.
+     *
+     * <p>Ensures that when an eye of ender breaks or drops in the speedrun overworld, triangulation is triggered. </p>
+     *
+     * @param event the eye of ender break event triggered by an ender eye throw in the speedrun overworld
+     */
+    @EventHandler
+    public void playerBasedTriangulation(EntityRemoveFromWorldEvent event) {
+        // Only on ender eyes
+        if (!(event.getEntity() instanceof EnderSignal)) return;
+
+        // Only if assisted triangulation is enabled and not a deterministic strategy
+        String strategy = configHandler.getAssistedTriangulationStrategy().toUpperCase(Locale.ROOT);
+        if (!configHandler.isAssistedTriangulation() || "DETERMINISTIC".equals(strategy)) return;
+
+        // Get info on the eye that broke / dropped
+        EnderSignal eye = (EnderSignal) event.getEntity();
+
+        // Get the speedrunner responsible for throwing the eye
+        Optional<Speedrunner> speedrunnerOpt = gameManager.getEyeThrower(eye);
+        if (speedrunnerOpt.isEmpty()) return;
+
+        Speedrunner speedrunner = speedrunnerOpt.get();
+
+        // Find the speedrunner's EyeThrow corresponding to this EnderSignal
+        Optional<EyeThrow> eyeThrowOpt = speedrunner.getEyeThrows().stream()
+                .filter(et -> et.getUuid().equals(eye.getUniqueId()))
+                .findFirst();
+        if (eyeThrowOpt.isEmpty()) return;
+
+        EyeThrow eyeThrow = eyeThrowOpt.get();
+
+        // Get the player's position, add it to the EyeThrow
+        eyeThrow.setPlayerPosition(speedrunner.getPlayer().getLocation());
+
+        // Get the player's view direction, add it to the EyeThrow
+        eyeThrow.setPlayerViewDirection(
+                speedrunner.getPlayer().getEyeLocation()
+                    .getDirection()
+                    .setY(0)
+                    .normalize()
+        );
+
+        // Try triangulation (will only succeed if strategy + data allows it)
+        gameManager.tryTriangulation(speedrunner);
     }
 }
 

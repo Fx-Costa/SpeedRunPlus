@@ -17,6 +17,7 @@ import org.bukkit.util.Consumer;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -87,6 +88,41 @@ public class WorldManager {
 
         // Cleanup leftover worlds
         cleanupLeftoverSrpWorlds();
+    }
+
+    /**
+     * Get owning player UUID.
+     *
+     * @param world the world.
+     *
+     * <p>Extracts the owning player UUID from the world's name.</p>
+     */
+    public Optional<UUID> getWorldOwnerUUID(World world) {
+        // Must be an active speedrun world
+        if (!isSpeedrunWorld(world)) return Optional.empty();
+
+        // Remove the configured prefix
+        int prefixLength;
+        switch (world.getEnvironment()) {
+            case NORMAL: prefixLength = configHandler.getOverworldPrefix().length(); break;
+            case NETHER: prefixLength = configHandler.getNetherPrefix().length(); break;
+            case THE_END: prefixLength = configHandler.getEndPrefix().length(); break;
+            default: return Optional.empty();
+        }
+
+        // Ensure the world name is not just the prefix
+        String worldName = world.getName();
+        if (worldName.length() <= prefixLength) return Optional.empty();
+
+        // Remove the prefix and any suffix if present
+        String uuidString = world.getName().substring(prefixLength).split("_")[0];
+
+        // Build a UUID
+        try {
+            return Optional.of(UUID.fromString(uuidString));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     /* ==========================================================
@@ -242,6 +278,32 @@ public class WorldManager {
     /* ==========================================================
      *                       HELPERS
      * ========================================================== */
+    private boolean isSpeedrunWorld(World world) {
+        // Only active worlds
+        if (Bukkit.getWorld(world.getUID()) == null) return false;
+
+        // Get the world as a Multiverse world (a speedrun world is always a Multiverse world)
+        MultiverseWorld mvWorld = mvWorldManager.getMVWorld(world);
+        if (mvWorld == null) return false;
+
+        // Get the world environment (overworld, nether, end)
+        World.Environment environment = mvWorld.getEnvironment();
+
+        // The world name must have the configured prefixes
+        switch (environment) {
+            // Whether the world has the configured overworld prefix
+            case NORMAL: return mvWorld.getName().startsWith(configHandler.getOverworldPrefix());
+
+            // Whether the world has the configured nether prefix
+            case NETHER: return mvWorld.getName().startsWith(configHandler.getNetherPrefix());
+
+            // Whether the world has the configured end prefix
+            case THE_END: return mvWorld.getName().startsWith(configHandler.getEndPrefix());
+
+            default: return false;
+        }
+    }
+
     private void linkWorlds(String overworldName, String netherName, String endName) {
         portalManager.addWorldLink(overworldName, netherName, PortalType.NETHER);
         portalManager.addWorldLink(netherName, overworldName, PortalType.NETHER);

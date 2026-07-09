@@ -17,8 +17,11 @@ game-rules:
     use-assisted-triangulation: false
 
     # The triangulation strategy - specifies the triangulation algorithm and thereby the level of assistance and
-    # variance during the assisted triangulation
-    strategy: DETERMINISTIC
+    # variance during the assisted triangulation, may be:
+    #   - DETERMINISTIC           (easiest - triangulation is based on eye directions)
+    #   - ASSISTED-PROBABILISTIC  (moderate - triangulation is based on player measurements with feedback)
+    #   - PROBABILISTIC           (hardest - triangulation is based on player measurements with minimal feedback)
+    strategy: ASSISTED-PROBABILISTIC
 
   # Speedrun world seeds
   filtered-seeds:

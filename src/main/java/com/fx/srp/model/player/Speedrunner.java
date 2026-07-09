@@ -60,13 +60,17 @@ public class Speedrunner {
      *                      Player states
      * ========================================================== */
     /**
-     * Add an eye of ender throw to the player's recorded throws - for assisted triangulation at 2 throws.
+     * Add an eye of ender throw to the player's recorded throws - for assisted triangulation.
      */
     public void addEyeThrow(EyeThrow eyeThrow) {
-        // Cycle eye throws, keeping track of only the latest two throws
-        int maximumEyeCount = 2;
-        if (eyeThrows.size() >= maximumEyeCount) eyeThrows.remove(0);
         eyeThrows.add(eyeThrow);
+    }
+
+    /**
+     * Reset the player's recorded throws.
+     */
+    public void resetEyeThrows() {
+        eyeThrows.clear();
     }
 
     /**

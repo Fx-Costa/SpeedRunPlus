@@ -21,30 +21,26 @@ import java.util.List;
 public class DeterministicTriangulation implements TriangulationStrategy {
 
     /**
-     * Small threshold used to determine if two rays are effectively parallel.
-     */
-    private static final double EPSILON = 1e-6;
-
-    /**
-     * Triangulates a stronghold location from exactly two EyeThrow objects.
+     * Triangulates a stronghold location (deterministically) from the last two eyes of ender thrown.
      *
-     * @param eyeThrows a list of exactly two EyeThrows
+     * @param eyeThrows a list of EyeThrows
      * @return a {@link TriangulationResult} containing the calculated stronghold
      *         location in the Overworld (and Nether), or {@code null} if triangulation
-     *         is not possible (e.g., rays are parallel or list size != 2)
+     *         is not possible (e.g., rays are parallel or list size < 2)
      */
     @Override
     public TriangulationResult triangulate(List<EyeThrow> eyeThrows) {
-        int requiredEyeCount = 2;
-        if (eyeThrows.size() != requiredEyeCount) return null;
+        if (!isReady(eyeThrows)) return null;
 
-        Vector intersection = intersectRays2D(eyeThrows.get(0), eyeThrows.get(1));
+        // Always use the last two eye throws
+        int eyeCount = eyeThrows.size();
+        Vector intersection = intersect(eyeThrows.get(eyeCount - 2), eyeThrows.get(eyeCount - 1));
         if (intersection == null) return null;
 
-        return new TriangulationResult(intersection);
+        return new TriangulationResult(intersection, null);
     }
 
-    private Vector intersectRays2D(EyeThrow throwA, EyeThrow throwB) {
+    private Vector intersect(EyeThrow throwA, EyeThrow throwB) {
         // Each ray is defined by: P + tD, where;
         // P = (x, 0, z) - the coordinates of the throw
         // t = Unknown scalar - the distance multiplier we want to find
@@ -60,7 +56,7 @@ public class DeterministicTriangulation implements TriangulationStrategy {
         // Ensure the rays are not (near) parallel (i.e. do not intersect) making triangulation impossible,
         // done by calculating the 2D cross product, when the cross product = 0, the rays are parallel
         double cross = dir1.getX() * dir2.getZ() - dir1.getZ() * dir2.getX();
-        if (Math.abs(cross) < EPSILON) return null;
+        if (Math.abs(cross) < PARALLEL_EPSILON) return null;
 
         // Determine the vector between the first and second throw, to find their relativity (distance, etc.)
         Vector relation = pos2.clone().subtract(pos1);
@@ -80,5 +76,15 @@ public class DeterministicTriangulation implements TriangulationStrategy {
     @Override
     public String getName() {
         return "DETERMINISTIC";
+    }
+
+    @Override
+    public boolean isReady(List<EyeThrow> eyeThrows) {
+        return eyeThrows.size() >= 2;
+    }
+
+    @Override
+    public String getFirstEyeMessage() {
+        return "#1 Eye of Ender! Throw another to triangulate the stronghold.";
     }
 }
