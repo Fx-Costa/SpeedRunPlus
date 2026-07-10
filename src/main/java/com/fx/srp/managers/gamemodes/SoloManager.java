@@ -74,6 +74,7 @@ public class SoloManager extends GameModeManager<SoloSpeedrun> {
             // Assign the speedrunner the world set and set the seed
             runner.setWorldSet(worldSet);
             soloSpeedrun.setSeed(worldSet.getOverworld().getSeed());
+            soloSpeedrun.setSeedType(worldSet.getSeedType());
 
             // Freeze the player
             runner.freeze();
