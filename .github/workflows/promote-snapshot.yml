@@ -7,6 +7,7 @@ on:
         description: The SNAPSHOT to promote
         type: choice
         options:
+          - 2.1.0-SNAPSHOT
           - 2.0.9-SNAPSHOT
           - 2.0.8-SNAPSHOT
           - 2.0.7-SNAPSHOT
