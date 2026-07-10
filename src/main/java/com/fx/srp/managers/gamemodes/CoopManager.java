@@ -138,6 +138,7 @@ public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
 
         CoopSpeedrun coopSpeedrun = new CoopSpeedrun(GameMode.COOP, speedrunners, stopWatch, null);
         gameManager.registerRun(coopSpeedrun);
+
         initializeRun(coopSpeedrun);
 
         List<Player> players = speedrunners.stream().map(Speedrunner::getPlayer).collect(Collectors.toList());
@@ -146,6 +147,7 @@ public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
         worldManager.createWorldsForPlayers(List.of(leader), null, sets -> {
             WorldManager.WorldSet worldSet = sets.get(leaderUUID);
             coopSpeedrun.setSeed(worldSet.getOverworld().getSeed());
+            coopSpeedrun.setSeedType(worldSet.getSeedType());
 
             speedrunners.forEach(sr -> {
                 sr.setWorldSet(worldSet);

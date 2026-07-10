@@ -3,6 +3,8 @@ package com.fx.srp.managers.util;
 import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.model.player.Speedrunner;
+import com.fx.srp.model.seed.SeedCategory;
+import com.fx.srp.model.seed.SelectedSeed;
 import com.onarandombox.MultiverseCore.api.MVWorldManager;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import com.onarandombox.MultiverseNetherPortals.MultiverseNetherPortals;
@@ -57,6 +59,7 @@ public class WorldManager {
         private final MultiverseWorld nether;
         private final MultiverseWorld end;
         private final Location spawn;
+        private final SeedCategory.SeedType seedType;
 
         /**
          * Constructs a set of worlds with a default spawn point.
@@ -64,12 +67,17 @@ public class WorldManager {
          * @param overworld The {@code MultiverseWorld} overworld.
          * @param nether The {@code MultiverseWorld} nether.
          * @param end The {@code MultiverseWorld} end.
+         * @param seedType The filtered {@link SeedCategory.SeedType} used for this world set's
+         *                 seed, or {@code null} if an explicit seed was supplied or filtered
+         *                 seeds are disabled.
          */
-        public WorldSet(MultiverseWorld overworld, MultiverseWorld nether, MultiverseWorld end) {
+        public WorldSet(MultiverseWorld overworld, MultiverseWorld nether, MultiverseWorld end,
+                        SeedCategory.SeedType seedType) {
             this.overworld = overworld;
             this.nether = nether;
             this.end = end;
             this.spawn = overworld.getSpawnLocation();
+            this.seedType = seedType;
         }
     }
 
@@ -149,13 +157,21 @@ public class WorldManager {
         int total = players.size();
 
         // Determine the seed
-        Long seed = inputSeed;
-        if (inputSeed == null) seed = seedManager.selectSeed();
+        Long seed;
+        SeedCategory.SeedType seedType = null;
+        if (inputSeed != null) {
+            seed = inputSeed;
+        } else {
+            SelectedSeed selectedSeed = seedManager.selectSeed();
+            seed = selectedSeed != null ? selectedSeed.getSeed() : null;
+            seedType = selectedSeed != null ? selectedSeed.getType() : null;
+        }
         String seedString = seed != null ? String.valueOf(seed) : null;
+        SeedCategory.SeedType finalSeedType = seedType;
 
         for (Player player : players) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                WorldSet set = createWorldSet(player, seedString);
+                WorldSet set = createWorldSet(player, seedString, finalSeedType);
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     sets.put(player.getUniqueId(), set);
@@ -168,7 +184,7 @@ public class WorldManager {
         }
     }
 
-    private WorldSet createWorldSet(Player player, String seed) {
+    private WorldSet createWorldSet(Player player, String seed, SeedCategory.SeedType seedType) {
         // Determine world names
         UUID uuid = player.getUniqueId();
         String overworldName = getWorldName(configHandler.getOverworldPrefix() + uuid);
@@ -213,7 +229,7 @@ public class WorldManager {
         // Link the three world
         linkWorlds(overworldName, netherName, endName);
 
-        return new WorldSet(overworld, nether, end);
+        return new WorldSet(overworld, nether, end, seedType);
     }
 
     /* ==========================================================

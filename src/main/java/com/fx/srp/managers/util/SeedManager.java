@@ -3,8 +3,9 @@ package com.fx.srp.managers.util;
 import com.fx.srp.SpeedRunPlus;
 import com.fx.srp.config.ConfigHandler;
 import com.fx.srp.model.seed.SeedCategory;
+import com.fx.srp.model.seed.SelectedSeed;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
 import java.io.*;
@@ -51,6 +52,12 @@ public class SeedManager {
     // Seeds
     private final Map<SeedCategory.SeedType, File> seedFiles = new ConcurrentHashMap<>();
     private final List<SeedCategory> seedCategories = new CopyOnWriteArrayList<>();
+
+    /** All known seeds per type, independent of whether the type is currently active
+     *  for weighted selection. Used so admin-added seeds can be tracked even before
+     *  a category has any seeds at all. */
+    private final Map<SeedCategory.SeedType, List<Long>> seedsByType = new ConcurrentHashMap<>();
+
     private int totalSeedWeight;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -70,6 +77,10 @@ public class SeedManager {
         Arrays.stream(SeedCategory.SeedType.values()).forEach(seedType -> {
             int weight = configHandler.getSeedWeight(seedType);
             List<Long> seeds = loadSeeds(seedType);
+
+            if (seedType != SeedCategory.SeedType.RANDOM) {
+                seedsByType.put(seedType, seeds);
+            }
 
             // Premature exit if the weight is non-positive or if no seeds are present
             if (!seedType.equals(SeedCategory.SeedType.RANDOM) && (weight < 1 || seeds.isEmpty())) return;
@@ -119,7 +130,7 @@ public class SeedManager {
                     .filter(s -> !s.isEmpty())
                     .map(s -> parseSeed(seedFile, s))
                     .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toCollection(ArrayList::new));
 
         } catch (IOException ex) {
             logger.warning("[SRP] Failed to read seed file: " + seedFile.getPath());
@@ -146,7 +157,7 @@ public class SeedManager {
      * @return A randomly selected seed value, or {@code null} if no suitable seed is available
      *         or the RANDOM category was selected.
      */
-    public Long selectSeed() {
+    public SelectedSeed selectSeed() {
         if (seedCategories.isEmpty() || totalSeedWeight < 1) return null;
 
         // Roll a random number within the sum of weights
@@ -158,16 +169,16 @@ public class SeedManager {
             cumulativeWeight += category.getWeight();
 
             if (weightRoll < cumulativeWeight) {
-                // Return null in case the RANDOM seed category was selected
-                if (category.getSeedType() == SeedCategory.SeedType.RANDOM) return null;
+                if (category.getSeedType() == SeedCategory.SeedType.RANDOM) {
+                    return new SelectedSeed(SeedCategory.SeedType.RANDOM, null);
+                }
 
                 // Roll a random number within the lengths of seeds in the category
                 List<Long> seeds = category.getSeeds();
-                final int seedRoll = ThreadLocalRandom.current().nextInt(seeds.size());
-                Long seed = seeds.get(seedRoll);
+                Long seed = seeds.get(ThreadLocalRandom.current().nextInt(seeds.size()));
 
                 logger.info("[SRP] Picked seed category: " + category.getSeedType().name() + ", seed: " + seed);
-                return seed;
+                return new SelectedSeed(category.getSeedType(), seed);
             }
         }
 
@@ -189,16 +200,16 @@ public class SeedManager {
     public void addSeedAsync(SeedCategory.SeedType seedType, int amount, CommandSender sender) {
         int minimumAmount = 1;
         if (amount < minimumAmount) {
-            sender.sendMessage(Color.RED + "The amount must be greater than 0!");
+            sender.sendMessage(ChatColor.RED + "The amount must be greater than 0!");
             return;
         }
         int maximumAmount = 10;
         if (amount > maximumAmount) {
-            sender.sendMessage(Color.RED + "The amount must be less than 10!");
+            sender.sendMessage(ChatColor.RED + "The amount must be less than 10!");
             return;
         }
         if (seedType == SeedCategory.SeedType.RANDOM) {
-            sender.sendMessage(Color.RED + "No need to add seeds of this type!");
+            sender.sendMessage(ChatColor.RED + "No need to add seeds of this type!");
             return;
         }
 
@@ -206,10 +217,10 @@ public class SeedManager {
             int newSeedCount = requestSeeds(seedType, amount);
 
             // Feedback
-            Color color = newSeedCount == amount ? Color.GREEN : newSeedCount > amount / 2 ? Color.YELLOW : Color.RED;
+            ChatColor color = newSeedCount == amount ? ChatColor.GREEN : newSeedCount > amount / 2 ? ChatColor.YELLOW : ChatColor.RED;
             String successMessage = newSeedCount > 0 ? "Successfully" : "Unsuccessfully";
             String message = String.format(
-                    "%s %s added %d new %s seeds!",
+                    "%s%s added %d new %s seed(s)!",
                     color,
                     successMessage,
                     newSeedCount,
@@ -223,15 +234,9 @@ public class SeedManager {
         File seedFile = seedFiles.get(seedType);
         if (seedFile == null) return 0;
 
-        // Find category in memory
-        SeedCategory category = seedCategories.stream()
-                .filter(c -> c.getSeedType() == seedType)
-                .findFirst()
-                .orElse(null);
-
-        if (category == null) return 0;
-
-        List<Long> existingSeeds = category.getSeeds();
+        // Use the always-populated per-type list rather than seedCategories, since a
+        // brand-new/empty category won't be present there yet
+        List<Long> existingSeeds = seedsByType.computeIfAbsent(seedType, t -> new ArrayList<>());
         List<Long> newSeeds = new ArrayList<>();
 
         try {
@@ -260,6 +265,17 @@ public class SeedManager {
 
         // Write the seeds to memory (ensuring that a reload is not necessary)
         existingSeeds.addAll(newSeeds);
+
+        // Promote this type into the active weighted-selection pool if it wasn't already
+        // in it (e.g. it started with zero seeds) and now has at least one
+        if (!newSeeds.isEmpty() && seedCategories.stream().noneMatch(c -> c.getSeedType() == seedType)) {
+            int weight = configHandler.getSeedWeight(seedType);
+            if (weight >= 1) {
+                seedCategories.add(new SeedCategory(seedType, weight, existingSeeds));
+                totalSeedWeight += weight;
+                logger.info("[SRP] " + seedType.name() + " now has seeds and is active for selection.");
+            }
+        }
 
         logger.info("[SRP] Added " + newSeeds.size() + " seeds to " + seedType.name() + "!");
         return newSeeds.size();

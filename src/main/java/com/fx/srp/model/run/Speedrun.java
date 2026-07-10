@@ -3,6 +3,7 @@ package com.fx.srp.model.run;
 import com.fx.srp.managers.util.WorldManager;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.commands.GameMode;
+import com.fx.srp.model.seed.SeedCategory;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang.time.StopWatch;
@@ -37,6 +38,8 @@ public abstract class Speedrun implements ISpeedrun {
     @Getter @Setter protected BukkitTask timerUpdateTask;
 
     @Getter @Setter protected BukkitTask timeoutTask;
+
+    @Getter @Setter private SeedCategory.SeedType seedType;
 
     /**
      * Constructs a new speedrun instance.
