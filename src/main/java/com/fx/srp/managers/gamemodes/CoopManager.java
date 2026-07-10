@@ -83,6 +83,7 @@ public class CoopManager extends MultiplayerGameModeManager<CoopSpeedrun> {
             leaderSpeedrunner.setWorldSet(leaderWorldSet);
             partnerSpeedrunner.setWorldSet(leaderWorldSet);
             coopSpeedrun.setSeed(leaderWorldSet.getOverworld().getSeed());
+            coopSpeedrun.setSeedType(leaderWorldSet.getSeedType());
 
             // Freeze the players
             leaderSpeedrunner.freeze();

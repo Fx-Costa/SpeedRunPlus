@@ -6,6 +6,7 @@ import com.fx.srp.managers.GameManager;
 import com.fx.srp.managers.util.WorldManager;
 import com.fx.srp.model.player.Speedrunner;
 import com.fx.srp.model.run.Speedrun;
+import com.fx.srp.model.seed.SeedTypeDisplay;
 import com.fx.srp.util.ui.TimerUtil;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
@@ -106,10 +107,15 @@ public abstract class GameModeManager<T extends Speedrun> implements IGameModeMa
 
                 // Countdown text (title)
                 if (seconds > 0) {
+                    String subtitle = "";
+                    if (configHandler.isFilteredSeeds() && run.getSeedType() != null) {
+                        subtitle = SeedTypeDisplay.format(run.getSeedType());
+                    }
+
                     for (Speedrunner p : players) {
                         p.getPlayer().sendTitle(
                                 ChatColor.YELLOW + "Starting in " + seconds + "...",
-                                "",
+                                subtitle,
                                 0, 20, 0
                         );
                     }

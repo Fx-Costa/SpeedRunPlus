@@ -86,6 +86,7 @@ public class BattleManager extends MultiplayerGameModeManager<BattleSpeedrun> {
             challengerSpeedrunner.setWorldSet(challengerWorldSet);
             challengeeSpeedrunner.setWorldSet(challengeeWorldSet);
             battleSpeedrun.setSeed(challengerWorldSet.getOverworld().getSeed());
+            battleSpeedrun.setSeedType(challengerWorldSet.getSeedType());
 
             // Freeze the players
             challengerSpeedrunner.freeze();
